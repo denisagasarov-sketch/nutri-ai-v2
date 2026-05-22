@@ -245,6 +245,13 @@ input::placeholder{color:var(--muted)}
 /* ── Toast ── */
 .toast{position:fixed;bottom:85px;left:50%;transform:translateX(-50%) translateY(8px);background:#1e1e3a;border:1px solid var(--border);border-radius:10px;padding:11px 20px;font-size:14px;opacity:0;transition:all .25s;z-index:400;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ── Help bottom sheet ── */
+#helpSheet{position:fixed;bottom:0;left:0;right:0;max-height:80vh;overflow-y:auto;background:var(--card);border-radius:16px 16px 0 0;padding:20px 16px;z-index:200;transform:translateY(100%);transition:transform .3s ease}
+#helpSheet h3{font-size:14px;color:#a78bfa;margin:16px 0 6px}
+#helpSheet p,#helpSheet li{font-size:13px;line-height:1.6;color:var(--text)}
+#helpSheet ul{padding-left:16px;margin:4px 0 8px}
+.help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199;display:none}
+.help-overlay.open{display:block}
 </style>
 </head>
 <body>
@@ -318,6 +325,7 @@ input::placeholder{color:var(--muted)}
         <button class="ds-nav-btn dim" id="ds-prev-btn" onclick="navigateDayPrev()">‹</button>
         <span id="ds-date-lbl" style="flex:1;text-align:center;font-size:15px;font-weight:700">Сегодня</span>
         <button class="ds-nav-btn dim" id="ds-next-btn" onclick="navigateDayNext()">›</button>
+        <button onclick="openHelp()" style="background:none;border:none;font-size:18px;cursor:pointer;padding:4px 6px;color:var(--muted);line-height:1">❓</button>
       </div>
     </div>
 
@@ -464,6 +472,10 @@ input::placeholder{color:var(--muted)}
 
   <!-- ═══ SETTINGS ═══ -->
   <section class="sec" id="sec-settings">
+    <div class="sec-hdr">
+      <h2>Настройки</h2>
+      <button onclick="openHelp()" style="background:none;border:none;font-size:22px;cursor:pointer;padding:4px;line-height:1">❓</button>
+    </div>
 
     <!-- Profile form -->
     <div class="card">
@@ -638,6 +650,16 @@ input::placeholder{color:var(--muted)}
 
 </div><!-- .app -->
 
+<!-- HELP BOTTOM SHEET -->
+<div class="help-overlay" id="helpOverlay" onclick="closeHelp()"></div>
+<div id="helpSheet">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <span style="font-size:16px;font-weight:700">Как работают баллы</span>
+    <button onclick="closeHelp()" style="background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;padding:0;line-height:1">✕</button>
+  </div>
+  <div id="helpContent"></div>
+</div>
+
 <!-- USER FOOD EDIT MODAL -->
 <div id="userFoodModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeUserFoodModal()">
   <div class="modal-box">
@@ -797,7 +819,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.3.1';
+const VERSION = '1.3.2';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2221,6 +2243,125 @@ function importData(e) {
     }
   };
   reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════
+//  HELP
+// ═══════════════════════════════════════════
+function openHelp() {
+  const profile = lsGet('profile', {});
+  const goal = profile.goal || 'loss';
+  const mode = profile.mode || 'moderate';
+  const trackActivity = profile.trackActivity !== false;
+
+  const T = calcTargets(profile);
+
+  const goalName = { loss: 'Похудение', maintain: 'Поддержание', gain: 'Набор мышц' }[goal];
+  const modeName = { mild: 'Мягкий', moderate: 'Умеренный', intense: 'Интенсивный' }[mode];
+
+  let html = `<p style="color:var(--muted);font-size:12px;margin-bottom:16px">
+    Цель: <b>${goalName}</b>${goal !== 'maintain' ? ' · Режим: <b>' + modeName + '</b>' : ''}</p>`;
+
+  html += '<h3>📝 Как добавлять еду</h3>';
+  html += '<p>Пиши название и вес через пробел:</p>';
+  html += '<ul>';
+  html += '<li>курица 150 — курица 150г</li>';
+  html += '<li>овсянка 70 — овсянка 70г</li>';
+  html += '<li>курица 150 овсянка 70 — несколько сразу</li>';
+  html += '</ul>';
+  html += '<p>Если вес не указан — приложение попросит уточнить.</p>';
+  html += '<p>Добавь свои продукты в Настройки → Мои продукты — тогда GPT не нужен.</p>';
+
+  html += '<h3>🔥 Калории (40 пт)</h3>';
+  html += `<p>Твоя цель: <b>${T.kcal} ккал/день</b></p>`;
+
+  if (goal === 'loss') {
+    const tempoMap = { mild: '0.3', moderate: '0.5', intense: '0.7' };
+    const deficitMap = { mild: 300, moderate: 500, intense: 700 };
+    html += `<p>Съел ≤${T.kcal} ккал → 40 пт. Каждые ~150 ккал сверх нормы снижают балл. Дефицит ~${deficitMap[mode]} ккал/день даёт темп ~${tempoMap[mode]} кг/неделю.</p>`;
+  } else if (goal === 'gain') {
+    const surplusMap = { mild: 200, moderate: 400, intense: 600 };
+    html += `<p>Оптимальный профицит: +${surplusMap[mode]} ккал сверх нормы → 40 пт. Дефицит штрафуется. Профицит выше +500 ккал тоже штрафуется — лишнее уйдёт в жир.</p>`;
+  } else {
+    html += `<p>Держись в диапазоне ±100 ккал от цели ${T.kcal} ккал → 40 пт. Отклонение в любую сторону снижает балл.</p>`;
+  }
+
+  html += '<h3>💪 Белок (35 пт)</h3>';
+  const protCoef = goal === 'maintain' ? 1.6 : 2.0;
+  html += `<p>Цель: <b>${T.prot}г/день</b> (${protCoef}г × ${profile.weight || 80}кг)</p>`;
+
+  if (goal === 'loss') {
+    html += '<p>Без достаточного белка при дефиците калорий тело теряет мышцы вместе с жиром. Держи белок — сохранишь форму.</p>';
+  } else if (goal === 'gain') {
+    html += '<p>Белок — строительный материал мышц. Без нормы белка профицит калорий уйдёт в жир, а не в мышцы.</p>';
+  } else {
+    html += '<p>Поддерживай мышечную массу — не опускайся ниже цели по белку.</p>';
+  }
+
+  html += '<h3>⚖️ Баланс БЖУ (15 пт)</h3>';
+  html += '<p>Идеальные пропорции: <b>Б33% · Ж30% · У37%</b> от общих калорий.</p>';
+  html += '<ul>';
+  html += '<li>Отклонение ≤5% → 15 пт</li>';
+  html += '<li>Отклонение ≤10% → 11 пт</li>';
+  html += '<li>Отклонение ≤20% → 6 пт</li>';
+  html += '<li>Отклонение >20% → 0 пт</li>';
+  html += '</ul>';
+  html += '<p>Питаясь разнообразно — курица, крупы, овощи, немного жиров — баланс держится сам.</p>';
+
+  html += '<h3>🥗 Чистота (10 пт)</h3>';
+  html += '<p>Доля калорий из снеков от общего количества за день.</p>';
+  html += '<ul>';
+  html += '<li>0% снеков → 10 пт</li>';
+  html += '<li>до 5% → 9 пт</li>';
+  html += '<li>до 15% → 7 пт</li>';
+  html += '<li>до 25% → 4 пт</li>';
+  html += '<li>до 40% → 1 пт</li>';
+  html += '<li>больше 40% → 0 пт</li>';
+  html += '</ul>';
+  html += '<p>Тапни на продукт в списке чтобы изменить метку снек/чистое.</p>';
+
+  if (trackActivity) {
+    html += '<h3>🏃 Активность (бонус до +15 пт)</h3>';
+    html += '<p>Вводи активные ккал из Garmin при закрытии дня.</p>';
+    html += '<ul>';
+    html += '<li>&lt; 300 ккал → 0 пт</li>';
+    html += '<li>300–399 ккал → +4 пт</li>';
+    html += '<li>400–499 ккал → +6 пт</li>';
+    html += '<li>500–599 ккал → +8 пт</li>';
+    html += '<li>600–699 ккал → +10 пт</li>';
+    html += '<li>700–799 ккал → +12 пт</li>';
+    html += '<li>800+ ккал → +15 пт</li>';
+    html += '</ul>';
+    if (goal === 'loss') {
+      html += '<p>Активность компенсирует переедание — балл дня считается по эффективным ккал: съедено − активные.</p>';
+    } else if (goal === 'gain') {
+      html += '<p>Активность увеличивает TDEE — не забывай есть достаточно в дни тренировок.</p>';
+    }
+  }
+
+  html += '<h3>📊 График истории</h3>';
+  html += '<ul>';
+  html += '<li>Синие столбики — балл питания /100</li>';
+  html += '<li>Фиолетовая линия — балл дня /115</li>';
+  if (goal === 'loss') {
+    html += '<li>Зелёная линия — дефицит (худеем) ✅</li>';
+    html += '<li>Красная линия — профицит (набираем) ❌</li>';
+  } else if (goal === 'gain') {
+    html += '<li>Красная линия — профицит (набираем массу) ✅</li>';
+    html += '<li>Зелёная линия — дефицит (теряем массу) ❌</li>';
+  } else {
+    html += '<li>Линия около нуля — вес стабилен ✅</li>';
+  }
+  html += '</ul>';
+
+  document.getElementById('helpContent').innerHTML = html;
+  document.getElementById('helpOverlay').classList.add('open');
+  document.getElementById('helpSheet').style.transform = 'translateY(0)';
+}
+
+function closeHelp() {
+  document.getElementById('helpSheet').style.transform = 'translateY(100%)';
+  document.getElementById('helpOverlay').classList.remove('open');
 }
 
 // ═══════════════════════════════════════════
