@@ -373,7 +373,7 @@ input::placeholder{color:var(--muted)}
         <div class="sc-info" id="ds-bal-info"></div>
         <div class="track" style="height:8px"><div class="fill" id="ds-bal-bar" style="width:0%;background:var(--balance)"></div></div>
         <div class="sc-footer">
-          <span style="font-size:11px;color:var(--muted)">идеал Б33·Ж30·У37%</span>
+          <span style="font-size:11px;color:var(--muted)">идеал Б33%·Ж30%·У37%</span>
           <span class="sc-pts" style="color:var(--balance)" id="ds-bal-pts">—</span>
         </div>
       </div>
@@ -412,7 +412,9 @@ input::placeholder{color:var(--muted)}
   <section class="sec" id="sec-history">
     <div class="card">
       <div class="card-ttl">Динамика баллов и темп похудения</div>
-      <canvas id="scoreChart"></canvas>
+      <div id="chartWrapper" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <canvas id="scoreChart"></canvas>
+      </div>
       <div style="display:flex;gap:12px;font-size:11px;color:var(--muted);margin-top:8px;flex-wrap:wrap">
         <span><span style="display:inline-block;width:10px;height:10px;background:rgba(181,212,244,0.7);border:1px solid #185FA5;border-radius:2px;margin-right:4px"></span>Питание /100</span>
         <span><span style="display:inline-block;width:14px;height:2px;background:#a78bfa;margin-right:4px;vertical-align:middle"></span>День /115</span>
@@ -422,37 +424,41 @@ input::placeholder{color:var(--muted)}
 
     <div class="card">
       <div class="card-ttl">Баллы по компонентам</div>
-      <table class="hist-tbl">
-        <thead>
-          <tr>
-            <th>День</th>
-            <th style="color:var(--kcal)">Ккал</th>
-            <th style="color:var(--prot)">Белок</th>
-            <th style="color:var(--balance)">БЖУ</th>
-            <th style="color:var(--clean)">Чист.</th>
-            <th style="color:var(--activity)">Акт.</th>
-            <th>∑</th>
-          </tr>
-        </thead>
-        <tbody id="scoreTbody"></tbody>
-      </table>
+      <div style="max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+        <table class="hist-tbl">
+          <thead>
+            <tr>
+              <th>День</th>
+              <th style="color:var(--kcal)">Ккал</th>
+              <th style="color:var(--prot)">Белок</th>
+              <th style="color:var(--balance)">БЖУ</th>
+              <th style="color:var(--clean)">Чист.</th>
+              <th style="color:var(--activity)">Акт.</th>
+              <th>∑</th>
+            </tr>
+          </thead>
+          <tbody id="scoreTbody"></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="card">
       <div class="card-ttl">КБЖУ по дням</div>
-      <table class="hist-tbl">
-        <thead>
-          <tr>
-            <th>День</th>
-            <th>Ккал</th>
-            <th>Белок</th>
-            <th>Жиры</th>
-            <th>Углев</th>
-            <th>Дефицит</th>
-          </tr>
-        </thead>
-        <tbody id="nutriTbody"></tbody>
-      </table>
+      <div style="max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+        <table class="hist-tbl">
+          <thead>
+            <tr>
+              <th>День</th>
+              <th>Ккал</th>
+              <th>Белок</th>
+              <th>Жиры</th>
+              <th>Углев</th>
+              <th>Дефицит</th>
+            </tr>
+          </thead>
+          <tbody id="nutriTbody"></tbody>
+        </table>
+      </div>
     </div>
   </section>
 
@@ -791,7 +797,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.3.0';
+const VERSION = '1.3.1';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1811,7 +1817,7 @@ function renderDayView() {
     const fPct = Math.round(dayObj.fat*9  / totalKcal * 100);
     const cPct = Math.round(dayObj.carb*4 / totalKcal * 100);
     const avgDev = ((Math.abs(bPct-33) + Math.abs(fPct-30) + Math.abs(cPct-37)) / 3).toFixed(1);
-    document.getElementById('ds-bal-info').textContent = `Б${bPct}% · Ж${fPct}% · У${cPct}% · откл. ${avgDev}%`;
+    document.getElementById('ds-bal-info').textContent = `Б${bPct}% · Ж${fPct}% · У${cPct}%`;
   } else {
     document.getElementById('ds-bal-info').textContent = 'Нет данных';
   }
@@ -1849,8 +1855,14 @@ function calcKgPerMonth(h) {
 }
 
 function renderChart() {
-  const ctx = document.getElementById('scoreChart').getContext('2d');
+  const canvas = document.getElementById('scoreChart');
+  const wrapper = document.getElementById('chartWrapper');
+  const ctx = canvas.getContext('2d');
   if (chart) chart.destroy();
+
+  const minWidth = wrapper ? wrapper.clientWidth : 300;
+  const chartWidth = Math.max(minWidth, history.length * 80);
+  canvas.style.width = chartWidth + 'px';
 
   const kgValues = history.map(h => calcKgPerMonth(h));
   const kgMax = Math.max(Math.abs(Math.min(...kgValues)), Math.abs(Math.max(...kgValues)), 1);
@@ -1908,8 +1920,9 @@ function renderChart() {
       ]
     },
     options: {
-      responsive: true,
+      responsive: false,
       maintainAspectRatio: false,
+      devicePixelRatio: window.devicePixelRatio || 1,
       plugins: {
         legend: { display: false },
         tooltip: { backgroundColor:'#1a1a2e', borderColor:'#2a2a4a', borderWidth:1, titleColor:'#e0e0ff', bodyColor:'#a0a0cc' }
@@ -1947,6 +1960,7 @@ function renderChart() {
       }
     }
   });
+  setTimeout(() => { if (wrapper) wrapper.scrollLeft = wrapper.scrollWidth; }, 100);
 }
 
 function renderProfileCard() {
@@ -1967,7 +1981,8 @@ function getScoresForDay(h) {
 function renderScoreTable() {
   const maxVals=[40,35,15,10,15];
   const colors=['var(--kcal)','var(--prot)','var(--balance)','var(--clean)','var(--activity)'];
-  document.getElementById('scoreTbody').innerHTML = history.map((h,idx) => {
+  const sorted = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
+  document.getElementById('scoreTbody').innerHTML = sorted.map((h) => {
     const gsd = getScoresForDay(h);
     return `
     <tr>
@@ -1982,7 +1997,9 @@ function renderScoreTable() {
 }
 
 function renderNutriTable() {
-  document.getElementById('nutriTbody').innerHTML = history.map((h,idx) => {
+  const sorted = history.map((h, idx) => ({ h, idx }))
+    .sort((a, b) => new Date(b.h.date) - new Date(a.h.date));
+  document.getElementById('nutriTbody').innerHTML = sorted.map(({ h, idx }) => {
     const diff = G.kcal - h.kcal;
     const defHtml = diff > 0
       ? `<span style="color:var(--clean)">−${diff}</span>`
