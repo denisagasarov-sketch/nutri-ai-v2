@@ -247,6 +247,16 @@ input::placeholder{color:var(--muted)}
 .sc-footer{display:flex;justify-content:space-between;align-items:center;margin-top:5px}
 .sc-pts{font-size:14px;font-weight:800}
 
+/* ── User Foods List ── */
+.uf-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.uf-item:last-child{border-bottom:none}
+.uf-name{font-size:14px;font-weight:600;margin-bottom:2px}
+.uf-sub{font-size:12px;color:var(--muted)}
+.uf-actions{display:flex;gap:6px;flex-shrink:0}
+.uf-act-btn{background:none;border:none;font-size:16px;cursor:pointer;padding:2px 4px;opacity:.7}
+.uf-act-btn:hover{opacity:1}
+.uf-type-btn{flex:1;padding:8px;border:1px solid var(--border);background:var(--bg);color:var(--muted);border-radius:8px;font-size:13px;cursor:pointer}
+.uf-type-btn.active{border-color:var(--clean);color:var(--clean);background:rgba(78,205,123,.1)}
 /* ── Toast ── */
 .toast{position:fixed;bottom:85px;left:50%;transform:translateX(-50%) translateY(8px);background:#1e1e3a;border:1px solid var(--border);border-radius:10px;padding:11px 20px;font-size:14px;opacity:0;transition:all .25s;z-index:400;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -638,6 +648,15 @@ input::placeholder{color:var(--muted)}
       <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
     </div>
 
+    <!-- My Products -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="card-ttl" style="margin-bottom:0">Мои продукты</div>
+        <button class="btn-icon" onclick="openUserFoodModal(null)" title="Добавить продукт" style="font-size:20px;line-height:1">+</button>
+      </div>
+      <div id="userFoodsList"></div>
+    </div>
+
     <!-- Data management -->
     <div class="card">
       <div class="card-ttl">Управление данными</div>
@@ -651,6 +670,53 @@ input::placeholder{color:var(--muted)}
   </section>
 
 </div><!-- .app -->
+
+<!-- USER FOOD EDIT MODAL -->
+<div id="userFoodModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeUserFoodModal()">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <span id="ufModalTitle">Продукт</span>
+      <button class="modal-close" onclick="closeUserFoodModal()">×</button>
+    </div>
+    <div class="modal-field" style="margin-bottom:10px">
+      <label>Название</label>
+      <input type="text" id="ufName" placeholder="Название продукта">
+    </div>
+    <div class="modal-field" style="margin-bottom:10px">
+      <label>Алиасы</label>
+      <input type="text" id="ufAliases" placeholder="через запятую: арах паста, арахпаста">
+    </div>
+    <div class="modal-grid" style="margin-bottom:10px">
+      <div class="modal-field">
+        <label>Ккал на 100г</label>
+        <input type="number" id="ufKcal" min="0" max="1000">
+      </div>
+      <div class="modal-field">
+        <label>Белок на 100г</label>
+        <input type="number" id="ufProt" min="0" max="100" step="0.1">
+      </div>
+      <div class="modal-field">
+        <label>Жиры на 100г</label>
+        <input type="number" id="ufFat" min="0" max="100" step="0.1">
+      </div>
+      <div class="modal-field">
+        <label>Углев на 100г</label>
+        <input type="number" id="ufCarb" min="0" max="300" step="0.1">
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Тип</div>
+      <div style="display:flex;gap:8px">
+        <button class="uf-type-btn active" id="ufTypeClean" onclick="setUfType('clean')">Чистое</button>
+        <button class="uf-type-btn" id="ufTypeSnack" onclick="setUfType('snack')">Снек</button>
+      </div>
+    </div>
+    <div class="row" style="gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeUserFoodModal()">Отмена</button>
+      <button class="btn" style="flex:1" onclick="saveUserFood()">Сохранить</button>
+    </div>
+  </div>
+</div>
 
 <!-- CLOSE DAY MODAL -->
 <div id="closeDayModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeCloseDayModal()">
@@ -1092,8 +1158,9 @@ function goTo(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('sec-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
-  if (name === 'history') renderHistory();
-  if (name === 'day')     renderDayView();
+  if (name === 'history')  renderHistory();
+  if (name === 'day')      renderDayView();
+  if (name === 'settings') renderUserFoodsList();
 }
 
 // ═══════════════════════════════════════════
@@ -1122,10 +1189,10 @@ function lookupUserFoods(txt) {
   const userFoods = lsGet('userFoods', []);
   if (!userFoods.length) return null;
   const q = txt.toLowerCase().trim();
-  const found = userFoods.find(f => {
-    if (q.includes(f.name.toLowerCase().trim())) return true;
-    return (f.aliases || []).some(a => q.includes(a.toLowerCase().trim()));
-  });
+  const found = userFoods.find(p =>
+    p.name.toLowerCase().includes(q) ||
+    (p.aliases||[]).some(a => a.toLowerCase().includes(q))
+  );
   if (!found) return null;
   const wm = txt.match(/(\d+(?:[.,]\d+)?)\s*(?:г(?:р(?:амм?)?)?|мл|ml|g(?:r(?:am)?)?)(?=\s|$|[^а-яёa-z])/i);
   const weight = wm ? parseFloat(wm[1].replace(',', '.')) : 100;
@@ -1506,6 +1573,90 @@ function renderFoods() {
 }
 
 function clLbl(c) { return c==='junk'?'мусор':c==='snack'?'снек':'чистое'; }
+
+// ═══════════════════════════════════════════
+//  MY PRODUCTS (userFoods)
+// ═══════════════════════════════════════════
+let _ufEditIdx = null;
+
+function renderUserFoodsList() {
+  const el = document.getElementById('userFoodsList');
+  if (!el) return;
+  const uFoods = lsGet('userFoods', []);
+  if (!uFoods.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0">Продукты появятся здесь после добавления через фото или текст</div>';
+    return;
+  }
+  el.innerHTML = uFoods.map((f, i) => `
+    <div class="uf-item">
+      <div style="min-width:0">
+        <div class="uf-name">${esc(f.name)}</div>
+        <div class="uf-sub">${f.kcal} ккал/100г · Б${f.prot} · Ж${f.fat} · У${f.carb} · <span class="badge ${f.cleanliness||'clean'}">${clLbl(f.cleanliness)}</span></div>
+      </div>
+      <div class="uf-actions">
+        <button class="uf-act-btn" onclick="openUserFoodModal(${i})">✏️</button>
+        <button class="uf-act-btn" onclick="deleteUserFood(${i})">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openUserFoodModal(idx) {
+  _ufEditIdx = idx;
+  const uFoods = lsGet('userFoods', []);
+  const f = idx !== null ? uFoods[idx] : null;
+  document.getElementById('ufModalTitle').textContent = f ? 'Редактировать продукт' : 'Новый продукт';
+  document.getElementById('ufName').value    = f ? f.name : '';
+  document.getElementById('ufAliases').value = f ? (f.aliases||[]).join(', ') : '';
+  document.getElementById('ufKcal').value    = f ? f.kcal : '';
+  document.getElementById('ufProt').value    = f ? f.prot : '';
+  document.getElementById('ufFat').value     = f ? f.fat  : '';
+  document.getElementById('ufCarb').value    = f ? f.carb : '';
+  setUfType(f ? (f.cleanliness||'clean') : 'clean');
+  document.getElementById('userFoodModal').style.display = 'flex';
+}
+
+function closeUserFoodModal() {
+  document.getElementById('userFoodModal').style.display = 'none';
+}
+
+function setUfType(type) {
+  document.getElementById('ufTypeClean').classList.toggle('active', type === 'clean');
+  document.getElementById('ufTypeSnack').classList.toggle('active', type === 'snack');
+  document.getElementById('userFoodModal').dataset.type = type;
+}
+
+function saveUserFood() {
+  const name = document.getElementById('ufName').value.trim();
+  if (!name) { toast('Введи название'); return; }
+  const aliasRaw = document.getElementById('ufAliases').value.trim();
+  const aliases  = aliasRaw ? aliasRaw.split(',').map(a => a.trim().toLowerCase()).filter(Boolean) : [name.toLowerCase()];
+  const kcal = parseFloat(document.getElementById('ufKcal').value) || 0;
+  const prot = parseFloat(document.getElementById('ufProt').value) || 0;
+  const fat  = parseFloat(document.getElementById('ufFat').value)  || 0;
+  const carb = parseFloat(document.getElementById('ufCarb').value) || 0;
+  const cleanliness = document.getElementById('userFoodModal').dataset.type || 'clean';
+  const entry = { name, aliases, kcal, prot, fat, carb, cleanliness, savedAt: new Date().toISOString() };
+  const uFoods = lsGet('userFoods', []);
+  if (_ufEditIdx !== null && _ufEditIdx >= 0) {
+    uFoods[_ufEditIdx] = entry;
+  } else {
+    uFoods.push(entry);
+  }
+  lsSave('userFoods', uFoods);
+  renderUserFoodsList();
+  closeUserFoodModal();
+  toast('✅ Продукт сохранён');
+}
+
+function deleteUserFood(idx) {
+  const uFoods = lsGet('userFoods', []);
+  if (!confirm('Удалить ' + uFoods[idx].name + '?')) return;
+  uFoods.splice(idx, 1);
+  lsSave('userFoods', uFoods);
+  renderUserFoodsList();
+  toast('🗑️ Продукт удалён');
+}
 
 function removeFood(i) {
   foods.splice(i,1); lsSave('foods', foods); renderFoods(); updateTotals();
