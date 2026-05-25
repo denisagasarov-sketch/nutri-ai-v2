@@ -845,7 +845,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.38';
+const VERSION = '1.4.39';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1289,15 +1289,16 @@ function lookupUserFoods(txt) {
   });
   if (!found) return null;
   const wm = txt.match(/(\d+(?:[.,]\d+)?)\s*(?:г(?:р(?:амм?)?)?|мл|ml|g(?:r(?:am)?)?)(?=\s|$|[^а-яёa-z])/i);
-  const weight = wm ? parseFloat(wm[1].replace(',', '.')) : 100;
-  const s = weight / 100;
+  if (!wm) return null;
+  const weight = parseFloat(wm[1].replace(',', '.'));
+  const factor = weight / 100;
   return {
     name:        found.name,
     weight:      Math.round(weight),
-    kcal:        Math.round(found.kcal * s),
-    prot:        Math.round(found.prot * s * 10) / 10,
-    fat:         Math.round(found.fat  * s * 10) / 10,
-    carb:        Math.round(found.carb * s * 10) / 10,
+    kcal:        Math.round(found.kcal * factor),
+    prot:        Math.round(found.prot * factor * 10) / 10,
+    fat:         Math.round(found.fat  * factor * 10) / 10,
+    carb:        Math.round(found.carb * factor * 10) / 10,
     cleanliness: found.cleanliness || 'clean'
   };
 }
