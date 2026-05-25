@@ -289,8 +289,6 @@ input::placeholder{color:var(--muted)}
 .hw-kbzhu-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.05)}
 .hw-kbzhu-row:last-child{border-bottom:none}
 .hw-empty{text-align:center;color:var(--muted);padding:28px 16px;font-size:14px}
-.hw-bar-wrap{flex:1;height:5px;background:rgba(255,255,255,0.07);border-radius:3px;min-width:0}
-.hw-bar{height:5px;border-radius:3px}
 .hw-calc{background:rgba(255,255,255,0.03);border-radius:8px;padding:6px 12px;margin-bottom:0}
 .hw-calc-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px}
 .hw-result{font-weight:600;font-size:13px}
@@ -799,7 +797,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.20';
+const VERSION = '1.4.21';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2358,9 +2356,6 @@ function renderHistoryDayRow(h, idx, bmr, targets) {
   const ref = bmr > 0 ? bmr : (targets.kcal || 1800);
   const deficit = Math.round(ref - effKcal);
   const kgDay = Math.round(-deficit * 30 / 7700 * 10) / 10;
-  const tempoStr = (kgDay <= 0 ? '\u2193' : '\u2191') + Math.abs(kgDay).toFixed(1);
-  const tempoColor = kgDay <= 0 ? 'var(--clean)' : 'var(--kcal)';
-
   const kPct = targets.kcal ? Math.round((h.kcal || 0) / targets.kcal * 100) : 0;
   const pPct = targets.prot ? Math.round((h.prot || 0) / targets.prot * 100) : 0;
   const fPct = targets.fat  ? Math.round((h.fat  || 0) / targets.fat  * 100) : 0;
@@ -2368,24 +2363,34 @@ function renderHistoryDayRow(h, idx, bmr, targets) {
 
   const detailId = 'hwday-' + idx;
 
-  const bmrRow = bmr > 0
-    ? `<div class="hw-kbzhu-row"><span style="color:var(--muted)">BMR</span><span>${bmr} ккал</span><span></span></div>`
-    : '';
-  const actRow = h.actKcal
-    ? `<div class="hw-kbzhu-row"><span style="color:var(--activity)">Активность</span><span>+${h.actKcal} сожжено</span><span></span></div>`
-    : '';
-
-  const isDeficit = kgDay <= 0;
-  const barColor = isDeficit ? '#1D9E75' : '#E24B4A';
-  const barW = targets.kcal ? Math.min(100, Math.round((h.kcal || 0) / targets.kcal * 100)) : 0;
-  const kgColor2 = barColor;
+  const isDeficit = deficit >= 0;
+  const defColor = isDeficit ? '#1D9E75' : '#E24B4A';
+  const defBg    = isDeficit ? 'rgba(29,158,117,0.15)' : 'rgba(226,75,74,0.15)';
+  const defLabel = isDeficit ? 'дефицит' : 'профицит';
+  const hasActivity = (h.actKcal || 0) > 0;
+  const kgColor2 = defColor;
 
   return `<div class="hw-day" onclick="hwToggleDay('${detailId}')">
-  <div class="hw-day-main">
-    <span class="hw-day-label">${dayLabel}</span>
-    <div class="hw-bar-wrap"><div class="hw-bar" style="width:${barW}%;background:${barColor}88"></div></div>
-    <span class="hw-day-kcal">${h.kcal || 0} ккал</span>
-    <span class="hw-day-def" style="color:${tempoColor}">${tempoStr} кг/мес</span>
+  <div class="hw-day-main" style="align-items:flex-start">
+    <span class="hw-day-label" style="padding-top:7px">${dayLabel}</span>
+    <div style="display:flex;gap:5px;flex:1">
+      <div style="display:flex;flex-direction:column;align-items:center;padding:5px 8px;border-radius:7px;background:rgba(255,255,255,0.07);min-width:48px">
+        <span style="font-size:12px;font-weight:600;color:#aaa">${h.kcal||0}</span>
+        <span style="font-size:9px;margin-top:2px;color:#555">ккал</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;padding:5px 8px;border-radius:7px;background:${hasActivity?'rgba(29,158,117,0.15)':'rgba(255,255,255,0.04)'};min-width:48px">
+        <span style="font-size:12px;font-weight:600;color:${hasActivity?'#1D9E75':'#333'}">${hasActivity?'−'+(h.actKcal||0):'—'}</span>
+        <span style="font-size:9px;margin-top:2px;color:${hasActivity?'#1D9E75':'#333'}">сожжено</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;padding:5px 8px;border-radius:7px;background:${defBg};min-width:48px">
+        <span style="font-size:12px;font-weight:600;color:${defColor}">${isDeficit?'−':'+'}${Math.abs(Math.round(deficit))}</span>
+        <span style="font-size:9px;margin-top:2px;color:${defColor}">${defLabel}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;padding:5px 8px;border-radius:7px;background:${defBg};flex-shrink:0">
+        <span style="font-size:13px;font-weight:700;color:${defColor}">${kgDay<=0?'↓':'↑'}${Math.abs(kgDay).toFixed(1)}</span>
+        <span style="font-size:9px;margin-top:2px;color:${defColor}">кг/мес</span>
+      </div>
+    </div>
   </div>
   <div class="hw-day-detail" id="${detailId}" style="display:none">
     <div class="hw-calc">
