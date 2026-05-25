@@ -845,7 +845,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.40';
+const VERSION = '1.4.41';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1281,21 +1281,19 @@ function extractQueryAndWeight(text) {
 }
 
 function lookupUserFoods(txt) {
-  const userFoods = lsGet('userFoods', []);
-  if (!userFoods.length) return null;
+  const products = lsGet('userFoods', []);
+  if (!products.length) return null;
   const { query, weight } = extractQueryAndWeight(txt);
   if (!weight) return null;
-  const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 1);
-  if (!queryWords.length) return null;
-  const found = userFoods.find(p => {
-    if (queryWords.every(w => p.name.toLowerCase().includes(w))) return true;
+  const q = query.toLowerCase().trim();
+  if (!q) return null;
+  const found = products.find(p => {
+    if (p.name.toLowerCase().includes(q)) return true;
     if (p.aliases && p.aliases.length) {
-      return p.aliases.some(a =>
-        queryWords.some(w =>
-          a.toLowerCase().startsWith(w.toLowerCase()) ||
-          w.toLowerCase().startsWith(a.toLowerCase())
-        )
-      );
+      return p.aliases.some(a => {
+        const al = a.toLowerCase().trim();
+        return q.includes(al) || al.includes(q);
+      });
     }
     return false;
   });
@@ -1304,7 +1302,7 @@ function lookupUserFoods(txt) {
   return {
     name:        found.name,
     weight:      weight,
-    kcal:        Math.round(found.kcal * factor),
+    kcal:        Math.round(found.kcal * factor * 10) / 10,
     prot:        Math.round(found.prot * factor * 10) / 10,
     fat:         Math.round(found.fat  * factor * 10) / 10,
     carb:        Math.round(found.carb * factor * 10) / 10,
