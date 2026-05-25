@@ -1,4 +1,4 @@
-const CACHE = 'nutri-ai-v2';
+const CACHE = 'nutri-ai-v3';
 
 // Relative paths — resolve against SW location (/nutri-ai/sw.js)
 // so ./ === https://denisagasarov-sketch.github.io/nutri-ai/
