@@ -475,14 +475,12 @@ input::placeholder{color:var(--muted)}
           <div style="display:flex;align-items:center;gap:6px;margin-top:4px"><span id="tipTempDot" style="width:8px;height:8px;border-radius:2px;flex-shrink:0"></span><span id="tipTemp"></span></div>
         </div>
         <div style="position:relative">
-          <button id="chartScrollLeft" onclick="scrollChartBy(-3)" style="position:absolute;left:-4px;top:50%;transform:translateY(-50%);z-index:10;background:rgba(15,15,26,0.85);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;box-shadow:0 0 8px rgba(0,0,0,0.4)">‹</button>
           <div style="display:flex;width:100%">
             <canvas id="chartAxisLeft" style="flex-shrink:0;width:44px"></canvas>
             <div id="chartWrapper" style="flex:1;min-width:0">
               <canvas id="scoreChart" role="img" aria-label="График баллов питания, дня и темпа"></canvas>
             </div>
           </div>
-          <button id="chartScrollRight" onclick="scrollChartBy(3)" style="position:absolute;right:-4px;top:50%;transform:translateY(-50%);z-index:10;background:rgba(15,15,26,0.85);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;box-shadow:0 0 8px rgba(0,0,0,0.4)">›</button>
         </div>
       </div>
     </div>
@@ -789,7 +787,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.23';
+const VERSION = '1.4.24';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2001,13 +1999,18 @@ function renderChart() {
   const dpr    = window.devicePixelRatio || 1;
   const H      = getChartHeight();
   const wrapper = document.getElementById('chartWrapper');
-  if (!wrapper || wrapper.clientWidth === 0) {
-    setTimeout(() => renderChart(), 100);
-    return;
+  if (!wrapper) { setTimeout(() => renderChart(), 100); return; }
+
+  function getChartWrapperWidth() {
+    const w = wrapper.clientWidth ||
+      wrapper.parentElement?.clientWidth ||
+      window.innerWidth - 120;
+    return Math.max(w, 200);
   }
-  const perDay = getPerDay(history.length, wrapper ? wrapper.clientWidth : 0);
+  const wrapperW = getChartWrapperWidth();
+  const perDay = getPerDay(history.length, wrapperW);
   _perDay = perDay;
-  const mainW  = Math.max(history.length * perDay, (wrapper ? (wrapper.clientWidth || 300) : 300) + 1);
+  const mainW  = Math.max(history.length * perDay, wrapperW + 1);
 
   const labels  = history.map(h => {
     const d = new Date(h.date);
@@ -2120,19 +2123,6 @@ function renderChart() {
 
   initChartTooltip();
 
-  function updateChartArrows() {
-    const wrapper = document.getElementById('chartWrapper');
-    const btnLeft = document.getElementById('chartScrollLeft');
-    const btnRight = document.getElementById('chartScrollRight');
-    if (!wrapper || !btnLeft || !btnRight) return;
-    const canScrollLeft = wrapper.scrollLeft > 0;
-    const canScrollRight = wrapper.scrollLeft < wrapper.scrollWidth - wrapper.clientWidth - 1;
-    btnLeft.style.opacity = canScrollLeft ? '1' : '0.2';
-    btnRight.style.opacity = canScrollRight ? '1' : '0.2';
-  }
-
-  wrapper.addEventListener('scroll', updateChartArrows);
-  setTimeout(updateChartArrows, 300);
 }
 
 if (!window._chartResizeAttached) {
@@ -2143,11 +2133,6 @@ if (!window._chartResizeAttached) {
   });
 }
 
-function scrollChartBy(days) {
-  const wrapper = document.getElementById('chartWrapper');
-  if (!wrapper) return;
-  wrapper.scrollBy({ left: days * _perDay, behavior: 'smooth' });
-}
 
 function renderProfileCard() {
   // kept for backwards compat — actual form population is in populateProfileForm
@@ -2310,7 +2295,7 @@ function renderHistoryWeek(monKey, items, bmr, targets) {
     <span class="hw-week-range">${rangeLabel}</span>
     <div class="hw-week-stats">
       <span style="color:${kgColor}">${kgStr} кг</span>
-      <span style="color:var(--muted)">${items.length} дн</span>
+      <span style="color:var(--muted)">${closedDays.length} из 7 дн</span>
     </div>
   </div>
   ${items.map(({ h, idx }) => renderHistoryDayRow(h, idx, bmr, targets)).join('')}
