@@ -715,7 +715,9 @@ input::placeholder{color:var(--muted)}
     <div style="margin-bottom:10px">
       <div style="font-size:10px;color:#555;margin-bottom:4px">Алиасы — как ты пишешь этот продукт</div>
       <input id="myProductAliases" placeholder="кура, курочка, курица"
+        oninput="renderAliasTags()"
         style="width:100%;background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:10px 12px;color:#fff;font-size:13px;outline:none">
+      <div id="myProductAliasTags" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px"></div>
       <div style="font-size:10px;color:#444;margin-top:4px">Через запятую. При вводе &ldquo;кура&rdquo; найдёт этот продукт.</div>
     </div>
     <div style="margin-bottom:14px">
@@ -843,7 +845,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.37';
+const VERSION = '1.4.38';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1275,10 +1277,16 @@ function lookupUserFoods(txt) {
   const userFoods = lsGet('userFoods', []);
   if (!userFoods.length) return null;
   const q = txt.toLowerCase().trim();
-  const found = userFoods.find(p =>
-    p.name.toLowerCase().includes(q) ||
-    (p.aliases||[]).some(a => a.toLowerCase().includes(q))
-  );
+  const found = userFoods.find(p => {
+    if (q.includes(p.name.toLowerCase())) return true;
+    if (p.aliases && p.aliases.length) {
+      return p.aliases.some(a =>
+        q.includes(a.toLowerCase()) ||
+        a.toLowerCase().includes(q.split(/\s+/)[0])
+      );
+    }
+    return false;
+  });
   if (!found) return null;
   const wm = txt.match(/(\d+(?:[.,]\d+)?)\s*(?:г(?:р(?:амм?)?)?|мл|ml|g(?:r(?:am)?)?)(?=\s|$|[^а-яёa-z])/i);
   const weight = wm ? parseFloat(wm[1].replace(',', '.')) : 100;
@@ -1485,6 +1493,7 @@ function openMyProductModal(idx) {
   document.getElementById('myProductCarb').value    = f ? f.carb : '';
   document.getElementById('myProductAliases').value = f ? (f.aliases||[]).join(', ') : '';
   document.getElementById('myProductLookupBtn').textContent = 'Найти';
+  renderAliasTags();
   setUfType(f ? (f.cleanliness || 'clean') : 'clean');
   document.getElementById('userFoodModal').style.display = 'flex';
 }
@@ -1524,11 +1533,33 @@ async function onLookupProduct() {
     document.getElementById('myProductFat').value  = product.fat  || '';
     document.getElementById('myProductCarb').value    = product.carb || '';
     document.getElementById('myProductAliases').value = (product.aliases||[]).join(', ');
+    renderAliasTags();
     btn.textContent = '✓ Найдено';
   } catch(e) {
     btn.textContent = 'Ошибка';
   }
   btn.disabled = false;
+}
+
+function renderAliasTags() {
+  const input = document.getElementById('myProductAliases');
+  const container = document.getElementById('myProductAliasTags');
+  if (!input || !container) return;
+  const aliases = input.value.split(',').map(a => a.trim()).filter(a => a.length > 0);
+  container.innerHTML = aliases.map(a =>
+    '<span onclick="removeAliasTag(\'' + a.replace(/'/g, "\\'") + '\')"'
+    + ' style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;'
+    + 'background:rgba(167,139,250,0.2);color:#a78bfa;font-size:11px;cursor:pointer">'
+    + a + ' <span style="opacity:0.6">×</span></span>'
+  ).join('');
+}
+
+function removeAliasTag(alias) {
+  const input = document.getElementById('myProductAliases');
+  const aliases = input.value.split(',').map(a => a.trim())
+    .filter(a => a.length > 0 && a.toLowerCase() !== alias.toLowerCase());
+  input.value = aliases.join(', ');
+  renderAliasTags();
 }
 
 function closeUserFoodModal() {
@@ -1566,6 +1597,7 @@ function saveMyProduct() {
     document.getElementById(id).value = '';
   });
   document.getElementById('myProductLookupBtn').textContent = 'Найти';
+  renderAliasTags();
   closeUserFoodModal();
   renderUserFoodsList();
   toast('✅ Продукт сохранён');
