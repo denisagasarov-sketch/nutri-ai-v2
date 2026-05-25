@@ -446,14 +446,15 @@ input::placeholder{color:var(--muted)}
           <div style="display:flex;align-items:center;gap:6px;margin-top:4px"><span style="width:8px;height:8px;border-radius:2px;background:#a78bfa;flex-shrink:0"></span><span id="tipDay"></span></div>
           <div style="display:flex;align-items:center;gap:6px;margin-top:4px"><span id="tipTempDot" style="width:8px;height:8px;border-radius:2px;flex-shrink:0"></span><span id="tipTemp"></span></div>
         </div>
-        <div style="display:flex;width:100%">
-          <canvas id="chartAxisLeft" style="flex-shrink:0;width:44px"></canvas>
-          <div id="chartWrapper" style="flex:1;min-width:0">
-            <canvas id="scoreChart" role="img" aria-label="График баллов питания, дня и темпа"></canvas>
+        <div style="position:relative">
+          <button id="chartScrollLeft" onclick="scrollChartBy(-3)" style="position:absolute;left:-4px;top:50%;transform:translateY(-50%);z-index:10;background:rgba(15,15,26,0.85);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;box-shadow:0 0 8px rgba(0,0,0,0.4)">‹</button>
+          <div style="display:flex;width:100%">
+            <canvas id="chartAxisLeft" style="flex-shrink:0;width:44px"></canvas>
+            <div id="chartWrapper" style="flex:1;min-width:0">
+              <canvas id="scoreChart" role="img" aria-label="График баллов питания, дня и темпа"></canvas>
+            </div>
           </div>
-        </div>
-        <div id="chartScrollTrack" style="width:100%;height:10px;background:rgba(255,255,255,0.08);border-radius:5px;margin-top:24px;position:relative;cursor:pointer">
-          <div id="chartScrollThumb" style="position:absolute;top:0;left:0;height:10px;border-radius:5px;background:rgba(255,255,255,0.4);transition:opacity 0.2s"></div>
+          <button id="chartScrollRight" onclick="scrollChartBy(3)" style="position:absolute;right:-4px;top:50%;transform:translateY(-50%);z-index:10;background:rgba(15,15,26,0.85);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;box-shadow:0 0 8px rgba(0,0,0,0.4)">›</button>
         </div>
       </div>
     </div>
@@ -797,7 +798,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.16';
+const VERSION = '1.4.17';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2168,7 +2169,20 @@ function renderChart() {
   }
 
   initChartTooltip();
-  initChartScrollbar();
+
+  function updateChartArrows() {
+    const wrapper = document.getElementById('chartWrapper');
+    const btnLeft = document.getElementById('chartScrollLeft');
+    const btnRight = document.getElementById('chartScrollRight');
+    if (!wrapper || !btnLeft || !btnRight) return;
+    const canScrollLeft = wrapper.scrollLeft > 0;
+    const canScrollRight = wrapper.scrollLeft < wrapper.scrollWidth - wrapper.clientWidth - 1;
+    btnLeft.style.opacity = canScrollLeft ? '1' : '0.2';
+    btnRight.style.opacity = canScrollRight ? '1' : '0.2';
+  }
+
+  wrapper.addEventListener('scroll', updateChartArrows);
+  setTimeout(updateChartArrows, 300);
 }
 
 if (!window._chartResizeAttached) {
@@ -2179,48 +2193,10 @@ if (!window._chartResizeAttached) {
   });
 }
 
-function initChartScrollbar() {
+function scrollChartBy(days) {
   const wrapper = document.getElementById('chartWrapper');
-  const track = document.getElementById('chartScrollTrack');
-  const thumb = document.getElementById('chartScrollThumb');
-  if (!wrapper || !track || !thumb) return;
-
-  function updateThumb() {
-    const ratio = wrapper.clientWidth / wrapper.scrollWidth;
-    if (ratio >= 1) { track.style.display = 'none'; return; }
-    track.style.display = 'block';
-    const thumbW = Math.max(ratio * track.clientWidth, 30);
-    const thumbLeft = (wrapper.scrollLeft / wrapper.scrollWidth) * track.clientWidth;
-    thumb.style.width = thumbW + 'px';
-    thumb.style.left = thumbLeft + 'px';
-  }
-
-  wrapper.removeEventListener('scroll', updateThumb);
-  wrapper.addEventListener('scroll', updateThumb);
-
-  wrapper.addEventListener('touchstart', e => { e.stopPropagation(); }, { passive: true });
-  wrapper.addEventListener('touchmove', e => { e.stopPropagation(); }, { passive: true });
-  track.addEventListener('touchstart', e => { e.stopPropagation(); }, { passive: true });
-  track.addEventListener('touchmove', e => { e.stopPropagation(); }, { passive: true });
-
-  track.onclick = (e) => {
-    const rect = track.getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
-    wrapper.scrollLeft = ratio * wrapper.scrollWidth;
-  };
-
-  let dragging = false, startX = 0, startScroll = 0;
-  thumb.addEventListener('touchstart', e => {
-    dragging = true; startX = e.touches[0].clientX; startScroll = wrapper.scrollLeft;
-  }, { passive: true });
-  document.addEventListener('touchmove', e => {
-    if (!dragging) return;
-    const dx = e.touches[0].clientX - startX;
-    wrapper.scrollLeft = startScroll + dx * (wrapper.scrollWidth / track.clientWidth);
-  }, { passive: true });
-  document.addEventListener('touchend', () => { dragging = false; });
-
-  updateThumb();
+  if (!wrapper) return;
+  wrapper.scrollBy({ left: days * _perDay, behavior: 'smooth' });
 }
 
 function renderProfileCard() {
