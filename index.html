@@ -105,7 +105,7 @@ input::placeholder{color:var(--muted)}
 .fi-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .fi-macros{font-size:11px;color:var(--muted);margin-top:2px}
 .fi-right{display:flex;align-items:center;gap:4px;flex-shrink:0}
-.fi-kcal{font-size:17px;font-weight:800;color:var(--kcal)}
+.fi-kcal{font-size:17px;font-weight:800;color:#666}
 .fi-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1;padding:2px 4px;transition:color .15s}
 .fi-del:active{color:var(--kcal)}
 
@@ -318,21 +318,10 @@ input::placeholder{color:var(--muted)}
   <!-- ═══ TODAY ═══ -->
   <section class="sec active" id="sec-today">
 
-    <!-- Food input -->
-    <div class="card">
-      <div class="card-ttl">Добавить продукт</div>
-      <div class="row">
-        <input type="text" id="foodInput" placeholder="что съел?" autocomplete="off" />
-        <button class="btn" id="addBtn" onclick="addFood()">+</button>
-      </div>
-      <div class="status-txt" id="addStatus"></div>
-    </div>
-
-
     <!-- Прогресс дня -->
     <div class="card today-progress">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
-        <span id="kcalRemain" style="font-size:28px;font-weight:700;color:var(--fg)">— ккал</span>
+        <div><span style="font-size:13px;color:#555">осталось </span><span id="kcalRemain" style="font-size:18px;font-weight:600;color:#1D9E75">— ккал</span></div>
         <span id="tempoToday" style="font-size:13px;color:var(--muted)">— кг/мес</span>
       </div>
       <div class="today-bar-row">
@@ -353,11 +342,17 @@ input::placeholder{color:var(--muted)}
       </div>
     </div>
 
+    <!-- Food input -->
+    <div class="card">
+      <div class="row">
+        <input type="text" id="foodInput" placeholder="что съел?" autocomplete="off" />
+        <button class="btn" id="addBtn" onclick="addFood()">+</button>
+      </div>
+      <div class="status-txt" id="addStatus"></div>
+    </div>
+
     <!-- Список еды -->
     <div class="card">
-      <div class="sec-hdr">
-        <div class="card-ttl" style="margin-bottom:0">Съедено сегодня</div>
-      </div>
       <div class="food-list" id="foodList"></div>
       <div class="div"></div>
       <div style="text-align:center;padding:10px 0"><span onclick="openCloseDayModal()" style="color:var(--muted);font-size:14px;cursor:pointer">Закрыть день</span></div>
@@ -788,7 +783,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.27';
+const VERSION = '1.4.28';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1381,25 +1376,51 @@ function formatTime(ts) {
   return h + ':' + m;
 }
 
+function removeFoodsByKey(nameKey) {
+  foods = foods.filter(f => f.name.toLowerCase().trim() !== nameKey);
+  lsSave('foods', foods);
+  renderFoods();
+  updateBars();
+}
+
 function renderFoods() {
   const el = document.getElementById('foodList');
   if (!foods.length) { el.innerHTML = '<div class="empty">Добавьте первый продукт</div>'; return; }
-  const sorted = foods.map((f,i) => ({...f, _i:i})).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+
+  const groups = {};
+  const order = [];
+  foods.forEach((f, i) => {
+    const key = f.name.toLowerCase().trim();
+    if (!groups[key]) {
+      groups[key] = { ...f, _key: key, _firstIdx: i };
+      order.push(key);
+    } else {
+      groups[key].kcal += f.kcal;
+      groups[key].prot  = Math.round((groups[key].prot + f.prot) * 10) / 10;
+      groups[key].fat   = Math.round((groups[key].fat  + f.fat ) * 10) / 10;
+      groups[key].carb  = Math.round((groups[key].carb + f.carb) * 10) / 10;
+      if (f.weight != null && groups[key].weight != null) groups[key].weight += f.weight;
+      if ((f.timestamp || 0) > (groups[key].timestamp || 0)) groups[key].timestamp = f.timestamp;
+    }
+  });
+
+  const sorted = order.map(k => groups[k]).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+
   el.innerHTML = sorted.map(f => {
-    const i = f._i;
     const wm = f.name.match(/^(.*?)\s+(\d+(?:\.\d+)?)г$/);
     const displayName = wm ? wm[1] : f.name;
     const weight = f.weight ?? (wm ? parseFloat(wm[2]) : null);
-    const wSpan = weight ? `<span style="color:var(--muted);font-size:12px"> ${weight}г</span>` : '';
+    const wSpan = weight ? `<span style="color:var(--muted);font-size:12px"> ${Math.round(weight * 10) / 10}г</span>` : '';
     const timeStr = f.timestamp ? `<span style="color:var(--muted);font-size:11px;margin-right:6px">${formatTime(f.timestamp)}</span>` : '';
-    return `<div class="food-item" onclick="openWeightEdit(${i})" style="cursor:pointer">
+    const safeKey = f._key.replace(/'/g, "\\'");
+    return `<div class="food-item" onclick="openWeightEdit(${f._firstIdx})" style="cursor:pointer">
       <div class="fi-left">
         <div class="fi-name">${timeStr}${esc(displayName)}${wSpan}<span class="badge ${f.cleanliness||'clean'}">${clLbl(f.cleanliness)}</span></div>
         <div class="fi-macros">Б ${fmtRu(f.prot)} · Ж ${fmtRu(f.fat)} · У ${fmtRu(f.carb)}</div>
       </div>
       <div class="fi-right">
         <div class="fi-kcal">${f.kcal}</div>
-        <button class="fi-del" onclick="event.stopPropagation();removeFood(${i})" aria-label="Удалить">×</button>
+        <button class="fi-del" onclick="event.stopPropagation();removeFoodsByKey('${safeKey}')" aria-label="Удалить">×</button>
       </div>
     </div>`;
   }).join('');
@@ -1581,7 +1602,7 @@ function updateBars() {
   const remEl = document.getElementById('kcalRemain');
   if (remEl) {
     remEl.textContent = Math.abs(remain) + ' ккал';
-    remEl.style.color = remain < 0 ? '#E24B4A' : 'var(--fg)';
+    remEl.style.color = remain < 0 ? '#E24B4A' : '#1D9E75';
   }
 
   const profile = lsGet('profile', {});
@@ -1599,7 +1620,7 @@ function updateBars() {
   }
 
   setBar('barKcal', rk / (G.kcal || 1), macroBarColor(rk / (G.kcal || 1), true));
-  setBar('barProt',  rp / (G.prot || 1), macroBarColor(rp / (G.prot || 1)));
+  setBar('barProt',  rp / (G.prot || 1), rp >= G.prot ? '#1D9E75' : '#c2703a');
   setBar('barFat',   rf / (G.fat  || 1), macroBarColor(rf / (G.fat  || 1)));
   setBar('barCarb',  rc / (G.carb || 1), macroBarColor(rc / (G.carb || 1)));
   setBarVal('barKcalVal', rk + ' / ' + G.kcal);
