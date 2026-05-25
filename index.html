@@ -207,10 +207,8 @@ input::placeholder{color:var(--muted)}
 
 /* ── History chart ── */
 #scoreChart{display:block}
-#chartWrapper{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.3) transparent}
-#chartWrapper::-webkit-scrollbar{height:4px;display:block}
-#chartWrapper::-webkit-scrollbar-track{background:transparent}
-#chartWrapper::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.3);border-radius:2px}
+#chartWrapper{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#chartWrapper::-webkit-scrollbar{display:none}
 
 /* ── Day view nav & animation ── */
 .ds-nav-btn{background:none;border:none;font-size:26px;line-height:1;padding:4px 10px;cursor:pointer;color:var(--text);transition:color .15s;flex-shrink:0}
@@ -453,6 +451,9 @@ input::placeholder{color:var(--muted)}
           <div id="chartWrapper" style="flex:1;min-width:0">
             <canvas id="scoreChart" role="img" aria-label="График баллов питания, дня и темпа"></canvas>
           </div>
+        </div>
+        <div id="chartScrollTrack" style="width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:6px;position:relative;cursor:pointer">
+          <div id="chartScrollThumb" style="position:absolute;top:0;left:0;height:4px;border-radius:2px;background:rgba(255,255,255,0.4);transition:opacity 0.2s"></div>
         </div>
       </div>
     </div>
@@ -796,7 +797,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.11';
+const VERSION = '1.4.12';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2013,14 +2014,14 @@ const kgLabelPlugin = {
     const dataset = chart.data.datasets[0];
     const meta = chart.getDatasetMeta(0);
     const dpr = window.devicePixelRatio || 1;
-    const fontSize = Math.round(FONT / dpr);
+    const fontSize = Math.round(12 * dpr);
+    ctx.font = `${fontSize}px ${Chart.defaults.font.family}`;
     meta.data.forEach((bar, i) => {
       const val = dataset.data[i];
       if (val === null || val === undefined) return;
       const label = (val > 0 ? '+' : '') + val.toFixed(1);
       ctx.save();
       ctx.fillStyle = '#ffffff';
-      ctx.font = `${fontSize}px ${Chart.defaults.font.family}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = val <= 0 ? 'bottom' : 'top';
       const yPos = val <= 0 ? bar.y - 3 : bar.y + 3;
@@ -2166,6 +2167,7 @@ function renderChart() {
   }
 
   initChartTooltip();
+  initChartScrollbar();
 }
 
 if (!window._chartResizeAttached) {
@@ -2174,6 +2176,45 @@ if (!window._chartResizeAttached) {
     clearTimeout(window._chartResizeTimer);
     window._chartResizeTimer = setTimeout(() => renderChart(), 500);
   });
+}
+
+function initChartScrollbar() {
+  const wrapper = document.getElementById('chartWrapper');
+  const track = document.getElementById('chartScrollTrack');
+  const thumb = document.getElementById('chartScrollThumb');
+  if (!wrapper || !track || !thumb) return;
+
+  function updateThumb() {
+    const ratio = wrapper.clientWidth / wrapper.scrollWidth;
+    if (ratio >= 1) { track.style.display = 'none'; return; }
+    track.style.display = 'block';
+    const thumbW = Math.max(ratio * track.clientWidth, 30);
+    const thumbLeft = (wrapper.scrollLeft / wrapper.scrollWidth) * track.clientWidth;
+    thumb.style.width = thumbW + 'px';
+    thumb.style.left = thumbLeft + 'px';
+  }
+
+  wrapper.removeEventListener('scroll', updateThumb);
+  wrapper.addEventListener('scroll', updateThumb);
+
+  track.onclick = (e) => {
+    const rect = track.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    wrapper.scrollLeft = ratio * wrapper.scrollWidth;
+  };
+
+  let dragging = false, startX = 0, startScroll = 0;
+  thumb.addEventListener('touchstart', e => {
+    dragging = true; startX = e.touches[0].clientX; startScroll = wrapper.scrollLeft;
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const dx = e.touches[0].clientX - startX;
+    wrapper.scrollLeft = startScroll + dx * (wrapper.scrollWidth / track.clientWidth);
+  }, { passive: true });
+  document.addEventListener('touchend', () => { dragging = false; });
+
+  updateThumb();
 }
 
 function renderProfileCard() {
