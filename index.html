@@ -454,7 +454,6 @@ input::placeholder{color:var(--muted)}
           <div id="chartWrapper" style="flex:1;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;overflow-y:hidden;scrollbar-width:none">
             <canvas id="scoreChart" role="img" aria-label="График баллов питания, дня и темпа"></canvas>
           </div>
-          <canvas id="chartAxisRight" style="flex-shrink:0;width:54px"></canvas>
         </div>
       </div>
     </div>
@@ -798,7 +797,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.4';
+const VERSION = '1.4.5';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1977,15 +1976,39 @@ function getPerDay(days, wrapperClientWidth) {
   if (!wrapperClientWidth || wrapperClientWidth < 50) return 40;
   const isLandscape = window.innerWidth > window.innerHeight;
   if (isLandscape) {
-    const availW = window.innerWidth - 98;
+    const availW = window.innerWidth - 44;
     const fitAll = Math.floor(availW / Math.max(days, 1));
     return Math.max(24, Math.min(fitAll, 60));
   }
   return 40;
 }
 
+const kgLabelPlugin = {
+  id: 'kgLabels',
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    const dataset = chart.data.datasets[0];
+    const meta = chart.getDatasetMeta(0);
+    meta.data.forEach((bar, i) => {
+      const val = dataset.data[i];
+      if (val === null || val === undefined) return;
+      const label = (val > 0 ? '+' : '') + val.toFixed(1);
+      const color = val <= 0 ? '#1D9E75' : '#E24B4A';
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.font = `bold 18px ${Chart.defaults.font.family}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = val <= 0 ? 'bottom' : 'top';
+      const yPos = val <= 0 ? bar.y - 3 : bar.y + 3;
+      ctx.fillText(label, bar.x, yPos);
+      ctx.restore();
+    });
+  }
+};
+Chart.register(kgLabelPlugin);
+
 function renderChart() {
-  ['_chartMain','_chartLeft','_chartRight'].forEach(k => {
+  ['_chartMain','_chartLeft'].forEach(k => {
     if (window[k]) { window[k].destroy(); window[k] = null; }
   });
   if (window._nutriChart) { window._nutriChart.destroy(); window._nutriChart = null; }
@@ -2031,27 +2054,6 @@ function renderChart() {
     }
   });
 
-  // Правая ось
-  const rc = document.getElementById('chartAxisRight');
-  rc.width = 54 * dpr; rc.height = H * dpr; rc.style.height = H + 'px';
-  window._chartRight = new Chart(rc, {
-    type: 'bar',
-    data: { labels: [''], datasets: [{ data: [0], yAxisID: 'y2', backgroundColor: 'transparent' }] },
-    options: {
-      responsive: false, devicePixelRatio: dpr,
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
-      layout: { padding: { bottom: 28 } },
-      scales: {
-        x: { display: false },
-        y2: { min: -2.5, max: 2.5, position: 'right',
-          grid: { display: false },
-          ticks: { font: { size: FONT }, color: '#888',
-            callback: v => v === 0 ? '0' : (v > 0 ? '+' : '') + v.toFixed(1) + 'кг' },
-          border: { display: false } }
-      }
-    }
-  });
-
   // Основной график
   const mc = document.getElementById('scoreChart');
   mc.width = mainW * dpr; mc.height = H * dpr;
@@ -2077,7 +2079,7 @@ function renderChart() {
     },
     options: {
       responsive: false, devicePixelRatio: dpr,
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      plugins: { kgLabels: {}, legend: { display: false }, tooltip: { enabled: false } },
       scales: {
         y: { display: true, min: 0, max: 115,
           grid: { display: false }, ticks: { display: false }, border: { display: false } },
