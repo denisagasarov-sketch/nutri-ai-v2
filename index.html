@@ -270,6 +270,25 @@ input::placeholder{color:var(--muted)}
 #helpSheet ul{padding-left:16px;margin:4px 0 8px}
 .help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199;display:none}
 .help-overlay.open{display:block}
+/* ── История: недельный вид ── */
+.hw-week{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.hw-week-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border)}
+.hw-week-range{font-size:13px;font-weight:600;color:var(--text)}
+.hw-week-stats{display:flex;gap:10px;font-size:12px;flex-wrap:wrap;justify-content:flex-end}
+.hw-day{border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;transition:background .15s}
+.hw-day:last-child{border-bottom:none}
+.hw-day:active{background:rgba(255,255,255,0.05)}
+.hw-day-main{display:flex;align-items:center;gap:8px;padding:10px 14px}
+.hw-day-label{font-size:13px;color:var(--text);min-width:76px;flex-shrink:0}
+.hw-day-kcal{font-size:13px;color:var(--text);flex:1}
+.hw-day-def{font-size:12px;font-weight:600;min-width:56px;text-align:right;flex-shrink:0}
+.hw-day-score{font-size:12px;min-width:32px;text-align:right;flex-shrink:0}
+.hw-edit-btn{background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;opacity:.65;flex-shrink:0;line-height:1}
+.hw-day-detail{padding:0 14px 10px}
+.hw-kbzhu{background:rgba(255,255,255,0.03);border-radius:8px;padding:6px 12px}
+.hw-kbzhu-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.hw-kbzhu-row:last-child{border-bottom:none}
+.hw-empty{text-align:center;color:var(--muted);padding:28px 16px;font-size:14px}
 </style>
 </head>
 <body>
@@ -459,44 +478,7 @@ input::placeholder{color:var(--muted)}
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-ttl">Баллы по компонентам</div>
-      <div style="max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">
-        <table class="hist-tbl">
-          <thead>
-            <tr>
-              <th>День</th>
-              <th style="color:var(--kcal)">Ккал</th>
-              <th style="color:var(--prot)">Белок</th>
-              <th style="color:var(--balance)">БЖУ</th>
-              <th style="color:var(--clean)">Чист.</th>
-              <th style="color:var(--activity)">Акт.</th>
-              <th>∑</th>
-            </tr>
-          </thead>
-          <tbody id="scoreTbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-ttl">КБЖУ по дням</div>
-      <div style="max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">
-        <table class="hist-tbl">
-          <thead>
-            <tr>
-              <th>День</th>
-              <th>Ккал</th>
-              <th>Белок</th>
-              <th>Жиры</th>
-              <th>Углев</th>
-              <th>Дефицит</th>
-            </tr>
-          </thead>
-          <tbody id="nutriTbody"></tbody>
-        </table>
-      </div>
-    </div>
+    <div id="historyWeeks"></div>
   </section>
 
   <!-- ═══ SETTINGS ═══ -->
@@ -798,7 +780,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.17';
+const VERSION = '1.4.18';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1910,7 +1892,7 @@ function renderDayView() {
 // ═══════════════════════════════════════════
 //  HISTORY
 // ═══════════════════════════════════════════
-function renderHistory() { renderStats(); renderChart(); renderScoreTable(); renderNutriTable(); }
+function renderHistory() { renderStats(); renderChart(); renderHistoryWeeks(); }
 
 function calcTotalStats(hist, profile) {
   if (!hist || !hist.length) return null;
@@ -2285,44 +2267,138 @@ function getScoresForDay(h) {
   return calc;
 }
 
-function renderScoreTable() {
-  const maxVals=[40,35,15,10,15];
-  const colors=['var(--kcal)','var(--prot)','var(--balance)','var(--clean)','var(--activity)'];
-  const sorted = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
-  document.getElementById('scoreTbody').innerHTML = sorted.map((h) => {
-    const gsd = getScoresForDay(h);
-    return `
-    <tr>
-      <td style="white-space:nowrap;font-size:11px">${h.date ? fmtDate(h.date) : h.label}</td>
-      ${gsd.scores.map((s,i) => `
-        <td>${s}<div class="mbar"><div class="mbar-fill" style="width:${Math.max(0,s/maxVals[i]*100).toFixed(0)}%;background:${colors[i]}"></div></div></td>
-      `).join('')}
-      <td><strong>${gsd.dayTotal}</strong></td>
-    </tr>
-  `;
-  }).join('');
+// ── История: недельный вид ──────────────────────────────────────────────────
+
+function getWeekMon(iso) {
+  const d = new Date(iso);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const mon = new Date(d);
+  mon.setDate(d.getDate() + diff);
+  mon.setHours(0, 0, 0, 0);
+  return mon.toISOString().slice(0, 10);
 }
 
-function renderNutriTable() {
+function renderHistoryWeeks() {
+  const container = document.getElementById('historyWeeks');
+  if (!container) return;
+
+  const profile = lsGet('profile', {});
+  const bmr = profile.weight
+    ? Math.round(calcBMR(profile.gender, profile.weight, profile.height, profile.age))
+    : 0;
+  const targets = profile.weight
+    ? calcTargets(profile)
+    : { kcal: 1800, prot: 150, fat: 60, carb: 165 };
+
+  if (!history || !history.length) {
+    container.innerHTML = '<div class="hw-empty">Нет данных за закрытые дни</div>';
+    return;
+  }
+
   const sorted = history.map((h, idx) => ({ h, idx }))
+    .filter(({ h }) => h.date)
     .sort((a, b) => new Date(b.h.date) - new Date(a.h.date));
-  document.getElementById('nutriTbody').innerHTML = sorted.map(({ h, idx }) => {
-    const diff = G.kcal - h.kcal;
-    const defHtml = diff > 0
-      ? `<span style="color:var(--clean)">−${diff}</span>`
-      : diff < 0
-        ? `<span style="color:var(--kcal)">+${Math.abs(diff)}</span>`
-        : `<span style="color:var(--muted)">0</span>`;
-    return `
-    <tr onclick="openDayEditModal(${idx})" style="cursor:pointer">
-      <td style="white-space:nowrap;font-size:11px">${h.date ? fmtDate(h.date) : h.label}</td>
-      <td>${h.kcal}<br><small style="color:var(--muted)">${pct(h.kcal,G.kcal)}</small></td>
-      <td>${h.prot}<br><small style="color:var(--muted)">${pct(h.prot,G.prot)}</small></td>
-      <td>${h.fat}<br><small style="color:var(--muted)">${pct(h.fat,G.fat)}</small></td>
-      <td>${h.carb}<br><small style="color:var(--muted)">${pct(h.carb,G.carb)}</small></td>
-      <td style="font-weight:600">${defHtml}</td>
-    </tr>
-  `}).join('');
+
+  const weeks = new Map();
+  sorted.forEach(item => {
+    const key = getWeekMon(item.h.date);
+    if (!weeks.has(key)) weeks.set(key, []);
+    weeks.get(key).push(item);
+  });
+
+  const html = [];
+  weeks.forEach((items, key) => {
+    html.push(renderHistoryWeek(key, items, bmr, targets));
+  });
+  container.innerHTML = html.join('');
+}
+
+function renderHistoryWeek(monKey, items, bmr, targets) {
+  const MONTHS = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  const mon = new Date(monKey);
+  const sun = new Date(monKey);
+  sun.setDate(mon.getDate() + 6);
+  const fmtMD = d => d.getDate() + ' ' + MONTHS[d.getMonth()];
+  const rangeLabel = mon.getMonth() === sun.getMonth()
+    ? `${mon.getDate()}–${sun.getDate()} ${MONTHS[mon.getMonth()]}`
+    : `${fmtMD(mon)} – ${fmtMD(sun)}`;
+
+  const totalDeficit = items.reduce((s, { h }) => {
+    const effKcal = (h.kcal || 0) - (h.actKcal || 0);
+    return s + (bmr > 0 ? bmr - effKcal : (targets.kcal - effKcal));
+  }, 0);
+  const kgEst = Math.round(-totalDeficit / 7700 * 10) / 10;
+  const kgStr = (kgEst > 0 ? '+' : '') + kgEst.toFixed(1);
+  const kgColor = kgEst <= 0 ? 'var(--clean)' : 'var(--kcal)';
+  const avgScore = items.length
+    ? Math.round(items.reduce((s, { h }) => s + (h.dayTotal || h.total || 0), 0) / items.length)
+    : 0;
+
+  return `<div class="hw-week">
+  <div class="hw-week-hdr">
+    <span class="hw-week-range">${rangeLabel}</span>
+    <div class="hw-week-stats">
+      <span style="color:${kgColor}">${kgStr} кг</span>
+      <span style="color:var(--muted)">${items.length} дн · ср. ${avgScore}б</span>
+    </div>
+  </div>
+  ${items.map(({ h, idx }) => renderHistoryDayRow(h, idx, bmr, targets)).join('')}
+</div>`;
+}
+
+function renderHistoryDayRow(h, idx, bmr, targets) {
+  const DAYS = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const d = new Date(h.date);
+  const dayLabel = DAYS[d.getDay()] + ' ' + fmtDate(h.date);
+
+  const effKcal = (h.kcal || 0) - (h.actKcal || 0);
+  const ref = bmr > 0 ? bmr : (targets.kcal || 1800);
+  const deficit = Math.round(ref - effKcal);
+  const defStr = deficit > 0 ? '−' + deficit : '+' + Math.abs(deficit);
+  const defColor = deficit > 0 ? 'var(--clean)' : 'var(--kcal)';
+
+  const score = h.dayTotal || h.total || 0;
+  const scoreColor = score >= 90 ? 'var(--clean)' : score >= 60 ? 'var(--prot)' : 'var(--kcal)';
+
+  const kPct = targets.kcal ? Math.round((h.kcal || 0) / targets.kcal * 100) : 0;
+  const pPct = targets.prot ? Math.round((h.prot || 0) / targets.prot * 100) : 0;
+  const fPct = targets.fat  ? Math.round((h.fat  || 0) / targets.fat  * 100) : 0;
+  const cPct = targets.carb ? Math.round((h.carb || 0) / targets.carb * 100) : 0;
+
+  const detailId = 'hwday-' + idx;
+
+  const bmrRow = bmr > 0
+    ? `<div class="hw-kbzhu-row"><span style="color:var(--muted)">BMR</span><span>${bmr} ккал</span><span></span></div>`
+    : '';
+  const actRow = h.actKcal
+    ? `<div class="hw-kbzhu-row"><span style="color:var(--activity)">Активность</span><span>+${h.actKcal} сожжено</span><span></span></div>`
+    : '';
+
+  return `<div class="hw-day" onclick="hwToggleDay('${detailId}')">
+  <div class="hw-day-main">
+    <span class="hw-day-label">${dayLabel}</span>
+    <span class="hw-day-kcal">${h.kcal || 0} ккал</span>
+    <span class="hw-day-def" style="color:${defColor}">${defStr}</span>
+    <span class="hw-day-score" style="color:${scoreColor}">${score}б</span>
+    <button class="hw-edit-btn" onclick="event.stopPropagation();openDayEditModal(${idx})">✏️</button>
+  </div>
+  <div class="hw-day-detail" id="${detailId}" style="display:none">
+    <div class="hw-kbzhu">
+      <div class="hw-kbzhu-row"><span style="color:var(--kcal)">Ккал</span><span>${h.kcal || 0} / ${targets.kcal}</span><span style="color:var(--muted)">${kPct}%</span></div>
+      <div class="hw-kbzhu-row"><span style="color:var(--prot)">Белок</span><span>${h.prot || 0} / ${targets.prot} г</span><span style="color:var(--muted)">${pPct}%</span></div>
+      <div class="hw-kbzhu-row"><span>Жиры</span><span>${h.fat || 0} / ${targets.fat} г</span><span style="color:var(--muted)">${fPct}%</span></div>
+      <div class="hw-kbzhu-row"><span style="color:var(--balance)">Углев</span><span>${h.carb || 0} / ${targets.carb} г</span><span style="color:var(--muted)">${cPct}%</span></div>
+      ${bmrRow}${actRow}
+    </div>
+  </div>
+</div>`;
+}
+
+function hwToggleDay(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 // ═══════════════════════════════════════════
