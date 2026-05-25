@@ -798,7 +798,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.3';
+const VERSION = '1.4.4';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1966,6 +1966,24 @@ function calcKgPerMonth(h) {
   return Math.round((-deficit) * 30 / 7700 * 10) / 10;
 }
 
+function getChartHeight() {
+  const isLandscape = window.innerWidth > window.innerHeight;
+  return isLandscape
+    ? Math.min(280, Math.floor(window.innerHeight * 0.65))
+    : 220;
+}
+
+function getPerDay(days, wrapperClientWidth) {
+  if (!wrapperClientWidth || wrapperClientWidth < 50) return 40;
+  const isLandscape = window.innerWidth > window.innerHeight;
+  if (isLandscape) {
+    const availW = window.innerWidth - 98;
+    const fitAll = Math.floor(availW / Math.max(days, 1));
+    return Math.max(24, Math.min(fitAll, 60));
+  }
+  return 40;
+}
+
 function renderChart() {
   ['_chartMain','_chartLeft','_chartRight'].forEach(k => {
     if (window[k]) { window[k].destroy(); window[k] = null; }
@@ -1975,11 +1993,10 @@ function renderChart() {
 
   const goal   = lsGet('profile', {}).goal || 'loss';
   const dpr    = window.devicePixelRatio || 1;
-  const H      = window.innerWidth > window.innerHeight
-    ? Math.min(300, window.innerHeight * 0.55) : 220;
+  const H      = getChartHeight();
   const FONT   = 21;
-  const perDay = 40;
   const wrapper = document.getElementById('chartWrapper');
+  const perDay = getPerDay(history.length, wrapper ? wrapper.clientWidth : 0);
   const mainW  = Math.max(history.length * perDay, (wrapper ? (wrapper.clientWidth || 300) : 300) + 1);
 
   const labels  = history.map(h => {
