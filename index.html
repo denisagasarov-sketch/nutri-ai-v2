@@ -841,7 +841,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.34';
+const VERSION = '1.4.35';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1812,14 +1812,15 @@ function updateTodayScreen() {
     }).join('');
   }
 
-  // Блок 5: список продуктов
+  // Блок 5: список продуктов (каждый продукт отдельно, свежее сверху)
   const foodListEl = document.getElementById('todayFoodList');
   if (foodListEl) {
-    if (!mergedList.length) {
+    const sortedFoods = [...foods].sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+    if (!sortedFoods.length) {
       foodListEl.innerHTML =
         '<div style="font-size:13px;color:#444;padding:10px 0;text-align:center">пока ничего не съедено</div>';
     } else {
-      foodListEl.innerHTML = mergedList.map(f => {
+      foodListEl.innerHTML = sortedFoods.map(f => {
         const cleanLabel = f.cleanliness === 'junk' ? 'мусор'
           : f.cleanliness === 'snack' ? 'снек' : 'чистое';
         const cleanColor = f.cleanliness === 'clean' ? '#1D9E75' : '#E24B4A';
