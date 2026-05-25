@@ -712,6 +712,12 @@ input::placeholder{color:var(--muted)}
         <input id="myProductCarb" type="number" style="width:100%;background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:8px;color:#fff;font-size:13px;outline:none;text-align:center">
       </div>
     </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;color:#555;margin-bottom:4px">Алиасы — как ты пишешь этот продукт</div>
+      <input id="myProductAliases" placeholder="кура, курочка, курица"
+        style="width:100%;background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:10px 12px;color:#fff;font-size:13px;outline:none">
+      <div style="font-size:10px;color:#444;margin-top:4px">Через запятую. При вводе &ldquo;кура&rdquo; найдёт этот продукт.</div>
+    </div>
     <div style="margin-bottom:14px">
       <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Тип</div>
       <div style="display:flex;gap:8px">
@@ -837,7 +843,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.36';
+const VERSION = '1.4.37';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1459,6 +1465,7 @@ function renderUserFoodsList() {
       <div style="min-width:0">
         <div class="uf-name">${esc(f.name)}</div>
         <div class="uf-sub">${f.kcal} ккал/100г · Б${f.prot} · Ж${f.fat} · У${f.carb} · <span class="badge ${f.cleanliness||'clean'}">${clLbl(f.cleanliness)}</span></div>
+        ${f.aliases && f.aliases.length ? `<div style="font-size:10px;color:#444;margin-top:2px">${f.aliases.join(', ')}</div>` : ''}
       </div>
       <div class="uf-actions">
         <button class="uf-act-btn" onclick="openMyProductModal(${i})">✏️</button>
@@ -1475,7 +1482,8 @@ function openMyProductModal(idx) {
   document.getElementById('myProductKcal').value  = f ? f.kcal : '';
   document.getElementById('myProductProt').value  = f ? f.prot : '';
   document.getElementById('myProductFat').value   = f ? f.fat  : '';
-  document.getElementById('myProductCarb').value  = f ? f.carb : '';
+  document.getElementById('myProductCarb').value    = f ? f.carb : '';
+  document.getElementById('myProductAliases').value = f ? (f.aliases||[]).join(', ') : '';
   document.getElementById('myProductLookupBtn').textContent = 'Найти';
   setUfType(f ? (f.cleanliness || 'clean') : 'clean');
   document.getElementById('userFoodModal').style.display = 'flex';
@@ -1490,9 +1498,9 @@ async function lookupProductGPT(name) {
     body: JSON.stringify({
       model: 'gpt-4o',
       temperature: 0.1,
-      max_tokens: 200,
+      max_tokens: 300,
       messages: [{ role: 'user', content:
-        `Найди КБЖУ для продукта "${name}" на 100г.\nОтвечай ТОЛЬКО JSON без пояснений:\n{"name":"...","kcal":0,"prot":0,"fat":0,"carb":0}\nЧисла округли до 1 знака после запятой.` }]
+        `Найди КБЖУ для "${name}" на 100г и предложи 3-5 коротких русских алиасов как люди пишут этот продукт.\nОтвечай ТОЛЬКО JSON без пояснений:\n{"name":"...","kcal":0,"prot":0,"fat":0,"carb":0,"aliases":["алиас1","алиас2"]}\nЧисла округли до 1 знака после запятой.` }]
     })
   });
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -1514,7 +1522,8 @@ async function onLookupProduct() {
     document.getElementById('myProductKcal').value = product.kcal || '';
     document.getElementById('myProductProt').value = product.prot || '';
     document.getElementById('myProductFat').value  = product.fat  || '';
-    document.getElementById('myProductCarb').value = product.carb || '';
+    document.getElementById('myProductCarb').value    = product.carb || '';
+    document.getElementById('myProductAliases').value = (product.aliases||[]).join(', ');
     btn.textContent = '✓ Найдено';
   } catch(e) {
     btn.textContent = 'Ошибка';
@@ -1535,12 +1544,17 @@ function setUfType(type) {
 function saveMyProduct() {
   const name = document.getElementById('myProductName').value.trim();
   if (!name) { toast('Введи название'); return; }
+  const aliasesRaw = document.getElementById('myProductAliases').value.trim();
+  const aliases = aliasesRaw
+    ? aliasesRaw.split(',').map(a => a.trim().toLowerCase()).filter(a => a.length > 0)
+    : [];
   const product = {
     name,
     kcal: parseFloat(document.getElementById('myProductKcal').value) || 0,
     prot: parseFloat(document.getElementById('myProductProt').value) || 0,
     fat:  parseFloat(document.getElementById('myProductFat').value)  || 0,
     carb: parseFloat(document.getElementById('myProductCarb').value) || 0,
+    aliases,
     cleanliness: document.getElementById('userFoodModal').dataset.type || 'clean',
     savedAt: new Date().toISOString()
   };
@@ -1548,7 +1562,7 @@ function saveMyProduct() {
   const idx = uFoods.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
   if (idx >= 0) uFoods[idx] = product; else uFoods.push(product);
   lsSave('userFoods', uFoods);
-  ['myProductName','myProductKcal','myProductProt','myProductFat','myProductCarb'].forEach(id => {
+  ['myProductName','myProductKcal','myProductProt','myProductFat','myProductCarb','myProductAliases'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('myProductLookupBtn').textContent = 'Найти';
