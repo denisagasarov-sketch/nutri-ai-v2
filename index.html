@@ -796,7 +796,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.10';
+const VERSION = '1.4.11';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1131,6 +1131,19 @@ function submitOnboarding() {
     localStorage.setItem('helpShownAfterProfile', profile.goal);
     setTimeout(() => openHelp(), 600);
   }
+}
+
+function skipOnboarding() {
+  const defaultProfile = {
+    gender: 'male', age: 30, weight: 70, height: 175,
+    actCoef: 1.375, goal: 'loss', mode: 'moderate',
+    trackActivity: true, kcal: 1800, prot: 150, fat: 60, carb: 165,
+    skipped: true
+  };
+  lsSave('profile', defaultProfile);
+  localStorage.setItem('app_initialized', '1');
+  document.getElementById('onboarding').style.display = 'none';
+  initApp();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2182,6 +2195,11 @@ function renderProfileCard() {
     el.onclick = null;
     return;
   }
+  if (p.skipped) {
+    el.innerHTML = `<div style="background:rgba(231,100,54,0.12);border:1px solid rgba(231,100,54,0.3);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px"><span style="font-size:13px;color:var(--text)">⚙️ Заполни профиль для точного расчёта целей</span><button class="btn btn-ghost" style="flex-shrink:0;padding:6px 12px;font-size:13px" onclick="openProfileEdit()">Заполнить</button></div>`;
+    el.onclick = null;
+    return;
+  }
   const gIcon    = p.gender === 'female' ? '♀' : '♂';
   const goalLine = [GOAL_NAMES[p.goal], p.goal !== 'maintain' ? MODE_NAMES[p.mode] : null, ACT_NAMES[String(p.actCoef)]].filter(Boolean).join(' · ');
   el.innerHTML = `<div><div class="profile-main">${gIcon} ${p.age} лет · ${p.weight} кг · ${p.height} см</div><div class="profile-goal">${goalLine}</div><div class="profile-targets">${p.kcal} ккал · Б${p.prot}г · Ж${p.fat}г · У${p.carb}г</div><div class="profile-edit-hint">Нажми чтобы изменить ›</div></div>`;
@@ -2755,6 +2773,9 @@ function lsSave(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catc
       <div id="ob-err" style="color:var(--kcal);font-size:13px;margin-top:10px;min-height:18px"></div>
       <button class="btn btn-full" style="margin-top:16px;font-size:16px;padding:14px" onclick="submitOnboarding()">
         Начать
+      </button>
+      <button onclick="skipOnboarding()" style="width:100%;padding:14px;margin-top:8px;background:none;border:none;cursor:pointer;font-size:15px;color:var(--muted,#888)">
+        Пропустить
       </button>
       <p style="text-align:center;color:var(--muted);font-size:12px;margin-top:14px">
         Всё можно изменить в Настройках
