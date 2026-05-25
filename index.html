@@ -797,7 +797,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.6';
+const VERSION = '1.4.7';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1151,12 +1151,20 @@ document.addEventListener('DOMContentLoaded', () => {
 // ═══════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════
+function onHistoryTabShow() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      renderHistory();
+    });
+  });
+}
+
 function goTo(name) {
   document.querySelectorAll('.sec').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('sec-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
-  if (name === 'history')  renderHistory();
+  if (name === 'history')  onHistoryTabShow();
   if (name === 'day')      renderDayView();
   if (name === 'settings') { renderUserFoodsList(); renderProfileCard(); }
 }
@@ -2018,6 +2026,10 @@ function renderChart() {
   const H      = getChartHeight();
   const FONT   = 21;
   const wrapper = document.getElementById('chartWrapper');
+  if (!wrapper || wrapper.clientWidth === 0) {
+    setTimeout(() => renderChart(), 100);
+    return;
+  }
   const perDay = getPerDay(history.length, wrapper ? wrapper.clientWidth : 0);
   const mainW  = Math.max(history.length * perDay, (wrapper ? (wrapper.clientWidth || 300) : 300) + 1);
 
