@@ -452,8 +452,8 @@ input::placeholder{color:var(--muted)}
             <canvas id="scoreChart" role="img" aria-label="График баллов питания, дня и темпа"></canvas>
           </div>
         </div>
-        <div id="chartScrollTrack" style="width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:6px;position:relative;cursor:pointer">
-          <div id="chartScrollThumb" style="position:absolute;top:0;left:0;height:4px;border-radius:2px;background:rgba(255,255,255,0.4);transition:opacity 0.2s"></div>
+        <div id="chartScrollTrack" style="width:100%;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;margin-top:14px;position:relative;cursor:pointer">
+          <div id="chartScrollThumb" style="position:absolute;top:0;left:0;height:6px;border-radius:3px;background:rgba(255,255,255,0.4);transition:opacity 0.2s"></div>
         </div>
       </div>
     </div>
@@ -797,7 +797,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.12';
+const VERSION = '1.4.13';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2196,6 +2196,11 @@ function initChartScrollbar() {
 
   wrapper.removeEventListener('scroll', updateThumb);
   wrapper.addEventListener('scroll', updateThumb);
+
+  wrapper.addEventListener('touchstart', e => { e.stopPropagation(); }, { passive: true });
+  wrapper.addEventListener('touchmove', e => { e.stopPropagation(); }, { passive: true });
+  track.addEventListener('touchstart', e => { e.stopPropagation(); }, { passive: true });
+  track.addEventListener('touchmove', e => { e.stopPropagation(); }, { passive: true });
 
   track.onclick = (e) => {
     const rect = track.getBoundingClientRect();
