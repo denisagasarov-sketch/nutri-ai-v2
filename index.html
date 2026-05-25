@@ -246,14 +246,6 @@ input::placeholder{color:var(--muted)}
 /* ── Toast ── */
 .toast{position:fixed;bottom:85px;left:50%;transform:translateX(-50%) translateY(8px);background:#1e1e3a;border:1px solid var(--border);border-radius:10px;padding:11px 20px;font-size:14px;opacity:0;transition:all .25s;z-index:400;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-/* ── Stats card ── */
-.stats-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px}
-.stats-title{font-size:13px;font-weight:500;color:var(--muted);margin-bottom:12px}
-.stats-row{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:8px}
-.stats-item{text-align:center;min-width:0}
-.stats-value{font-size:22px;font-weight:600;word-break:break-all}
-.stats-label{font-size:11px;color:var(--muted);margin-top:2px}
-.stats-best{font-size:12px;color:var(--muted);text-align:center;margin-top:8px;padding-top:8px;border-top:.5px solid var(--border)}
 /* ── Profile card + edit sheet ── */
 #profileCard{background:var(--bg);border-radius:var(--radius);padding:14px 16px;cursor:pointer;border:1px solid var(--border)}
 #profileCard:active{filter:brightness(0.92)}
@@ -279,6 +271,7 @@ input::placeholder{color:var(--muted)}
 .hw-day:last-child{border-bottom:none}
 .hw-day:active{background:rgba(255,255,255,0.05)}
 .hw-day-main{display:flex;align-items:center;gap:8px;padding:10px 14px}
+.hw-date{font-size:12px;color:var(--muted);min-width:42px;flex-shrink:0;padding-top:1px}
 .hw-day-label{font-size:13px;color:var(--text);min-width:76px;flex-shrink:0}
 .hw-day-kcal{font-size:13px;color:var(--text);flex:1}
 .hw-day-def{font-size:12px;font-weight:600;min-width:56px;text-align:right;flex-shrink:0}
@@ -473,7 +466,6 @@ input::placeholder{color:var(--muted)}
 
   <!-- ═══ HISTORY ═══ -->
   <section class="sec" id="sec-history">
-    <div id="statsCard"></div>
     <div class="card">
       <div class="card-ttl">ДИНАМИКА БАЛЛОВ И ТЕМП ПОХУДЕНИЯ</div>
       <div id="chartOuter" style="position:relative">
@@ -797,7 +789,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.21';
+const VERSION = '1.4.22';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1909,7 +1901,7 @@ function renderDayView() {
 // ═══════════════════════════════════════════
 //  HISTORY
 // ═══════════════════════════════════════════
-function renderHistory() { renderStats(); renderChart(); renderHistoryWeeks(); }
+function renderHistory() { renderChart(); renderHistoryWeeks(); }
 
 function calcTotalStats(hist, profile) {
   if (!hist || !hist.length) return null;
@@ -1945,31 +1937,7 @@ function calcTotalStats(hist, profile) {
   return { kgChanged, kgColor, avgScore, avgDayScore, best, daysOnTrack, totalDays: hist.length, goal };
 }
 
-function renderStats() {
-  const el = document.getElementById('statsCard');
-  if (!el) return;
-  const profile = lsGet('profile', {});
-  const s = calcTotalStats(history, profile);
-  if (!s) { el.innerHTML = ''; return; }
 
-  const kgLabel    = s.goal==='loss' ? 'потеряно' : s.goal==='gain' ? 'набрано' : 'изменение веса';
-  const trackLabel = s.goal==='loss' ? 'дней в дефиците' : s.goal==='gain' ? 'дней в профиците' : 'дней в норме';
-
-  const bestHtml = s.best
-    ? `<div class="stats-best">🏆 Лучший день: ${fmtDate(s.best.date)} — ${s.best.dayTotal||s.best.total} пт</div>`
-    : '';
-
-  el.innerHTML = `<div class="stats-card">
-    <div class="stats-title">📊 За всё время · ${s.totalDays} дней</div>
-    <div class="stats-row">
-      <div class="stats-item">
-        <div class="stats-value" style="color:${s.kgColor}">${s.kgChanged > 0 ? '+' : ''}${s.kgChanged} кг</div>
-        <div class="stats-label">${kgLabel}</div>
-      </div>
-    </div>
-    ${bestHtml}
-  </div>`;
-}
 
 function calcKgPerMonth(h) {
   const effKcal = (h.kcal || 0) - (h.actKcal || 0);
@@ -2364,31 +2332,24 @@ function renderHistoryDayRow(h, idx, bmr, targets) {
   const detailId = 'hwday-' + idx;
 
   const isDeficit = deficit >= 0;
-  const defColor = isDeficit ? '#1D9E75' : '#E24B4A';
-  const defBg    = isDeficit ? 'rgba(29,158,117,0.15)' : 'rgba(226,75,74,0.15)';
-  const defLabel = isDeficit ? 'дефицит' : 'профицит';
+  const kgColor  = kgDay <= 0 ? '#1D9E75' : '#E24B4A';
   const hasActivity = (h.actKcal || 0) > 0;
-  const kgColor2 = defColor;
+  const defAbs   = Math.abs(deficit);
+  const defLabel = isDeficit ? 'дефицит' : 'профицит';
+  const defSign  = isDeficit ? '−' : '+';
+  const kgColor2 = kgColor;
 
   return `<div class="hw-day" onclick="hwToggleDay('${detailId}')">
-  <div class="hw-day-main" style="align-items:flex-start">
-    <span class="hw-day-label" style="padding-top:7px">${dayLabel}</span>
-    <div style="display:flex;gap:5px;flex:1">
-      <div style="display:flex;flex-direction:column;align-items:center;padding:5px 8px;border-radius:7px;background:rgba(255,255,255,0.07);min-width:48px">
-        <span style="font-size:12px;font-weight:600;color:#aaa">${h.kcal||0}</span>
-        <span style="font-size:9px;margin-top:2px;color:#555">ккал</span>
+  <div class="hw-day-main">
+    <div class="hw-date">${fmtDate(h.date)}</div>
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:13px;color:#ccc;font-weight:500">${fmtNum(h.kcal||0)} ккал</span>
+        <span style="font-size:13px;font-weight:700;color:${kgColor}">${kgDay<=0?'↓':'↑'}${Math.abs(kgDay).toFixed(1)} кг/мес</span>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;padding:5px 8px;border-radius:7px;background:${hasActivity?'rgba(29,158,117,0.15)':'rgba(255,255,255,0.04)'};min-width:48px">
-        <span style="font-size:12px;font-weight:600;color:${hasActivity?'#1D9E75':'#333'}">${hasActivity?'−'+(h.actKcal||0):'—'}</span>
-        <span style="font-size:9px;margin-top:2px;color:${hasActivity?'#1D9E75':'#333'}">сожжено</span>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:center;padding:5px 8px;border-radius:7px;background:${defBg};min-width:48px">
-        <span style="font-size:12px;font-weight:600;color:${defColor}">${isDeficit?'−':'+'}${Math.abs(Math.round(deficit))}</span>
-        <span style="font-size:9px;margin-top:2px;color:${defColor}">${defLabel}</span>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:center;padding:5px 8px;border-radius:7px;background:${defBg};flex-shrink:0">
-        <span style="font-size:13px;font-weight:700;color:${defColor}">${kgDay<=0?'↓':'↑'}${Math.abs(kgDay).toFixed(1)}</span>
-        <span style="font-size:9px;margin-top:2px;color:${defColor}">кг/мес</span>
+      <div style="font-size:11px;margin-top:3px">
+        <span style="color:${kgColor}">${defLabel} ${defSign}${defAbs} ккал</span>
+        ${hasActivity ? `<span style="color:#555"> · </span><span style="color:#666">сожжено ${h.actKcal}</span>` : ''}
       </div>
     </div>
   </div>
