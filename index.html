@@ -752,6 +752,16 @@ input::placeholder{color:var(--muted)}
       <input type="number" id="actKcal" placeholder="0" min="0" oninput="saveActivity()">
       <span class="act-lbl">активных ккал (из Garmin)</span>
     </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;color:#555;margin-bottom:6px">
+        Дата закрываемого дня
+      </div>
+      <input type="date" id="closeDayDate"
+        style="width:100%;background:rgba(255,255,255,0.06);
+        border:none;border-radius:8px;padding:10px 12px;
+        color:#fff;font-size:13px;outline:none;
+        color-scheme:dark">
+    </div>
     <div class="div"></div>
     <div class="row" style="gap:8px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeDaySkipActivity()">Пропустить и закрыть</button>
@@ -1923,11 +1933,22 @@ function saveActivity() {
   localStorage.setItem('actKcal', actKcal);
 }
 
+function getDefaultCloseDate() {
+  const now = new Date();
+  if (now.getHours() < 6) {
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday.toISOString().split('T')[0];
+  }
+  return now.toISOString().split('T')[0];
+}
+
 function openCloseDayModal() {
   if (!foods.length) { toast('Нет данных за день'); return; }
   const _actMode = (lsGet('profile', DEFAULT_PROFILE).actMode) || 'manual';
   const _actKcalRow = document.getElementById('actKcalRow');
   if (_actKcalRow) _actKcalRow.style.display = _actMode === 'level' ? 'none' : '';
+  document.getElementById('closeDayDate').value = getDefaultCloseDate();
   document.getElementById('closeDayModal').style.display = 'flex';
 }
 
@@ -2065,8 +2086,11 @@ function closeDay() {
   const dayObj = { kcal: Math.round(t.kcal), prot: Math.round(t.prot), fat: Math.round(t.fat), carb: Math.round(t.carb), actKcal, foods };
   const r = calcScores(dayObj);
 
+  const closeDateVal = document.getElementById('closeDayDate').value;
+  const closeDateObj = closeDateVal ? new Date(closeDateVal + 'T12:00:00') : new Date();
+
   history.push({
-    date:       _todayDate.toISOString(),
+    date:       closeDateObj.toISOString(),
     kcal:       dayObj.kcal,
     prot:       dayObj.prot,
     fat:        dayObj.fat,
