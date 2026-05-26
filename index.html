@@ -861,7 +861,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.47';
+const VERSION = '1.4.48';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2735,6 +2735,10 @@ function renderHistoryDayRow(h, idx, bmr, targets) {
       <div class="hw-tab" onclick="event.stopPropagation();hwSwitchTab(this,'foods')">Продукты</div>
     </div>
     <div class="hw-tab-content hw-tab-summary">
+    <div style="text-align:right;margin-bottom:8px">
+      <button id="changeDateBtn-${idx}" onclick="event.stopPropagation();changeHistoryDate(${idx})" style="background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.12);color:#aaa;border-radius:8px;font-size:12px;padding:4px 10px;cursor:pointer">📅 Изменить дату</button>
+      <input type="date" id="changeDateInput-${idx}" style="display:none;background:rgba(255,255,255,0.06);border:0.5px solid rgba(167,139,250,0.4);border-radius:8px;padding:4px 10px;color:#fff;font-size:12px;outline:none;color-scheme:dark;margin-left:6px" onclick="event.stopPropagation()" onchange="event.stopPropagation();applyHistoryDate(${idx})">
+    </div>
     <div class="hw-calc">
       <div class="hw-calc-row"><span>Съедено</span><span>${h.kcal || 0} ккал</span></div>
       <div class="hw-calc-row"><span>Сожжено (активность)</span><span style="color:#1D9E75">− ${h.actKcal || 0} ккал</span></div>
@@ -2772,6 +2776,30 @@ function hwSwitchTab(tabEl, tabName) {
   const target = detail.querySelector('.hw-tab-' + tabName);
   if (target) target.style.display = 'block';
 }
+
+function changeHistoryDate(idx) {
+  const input = document.getElementById('changeDateInput-' + idx);
+  if (!input) return;
+  const h = history[idx];
+  input.value = new Date(h.date).toISOString().split('T')[0];
+  input.style.display = input.style.display === 'none' ? 'inline' : 'none';
+  if (input.style.display === 'inline') input.focus();
+}
+
+function applyHistoryDate(idx) {
+  const input = document.getElementById('changeDateInput-' + idx);
+  const newDate = input.value;
+  if (!newDate) return;
+  const exists = history.some((h, i) => i !== idx && h.date && h.date.startsWith(newDate));
+  if (exists) {
+    alert('На эту дату уже есть данные, выберите другую');
+    return;
+  }
+  history[idx].date = new Date(newDate + 'T12:00:00').toISOString();
+  lsSave('history', history);
+  renderHistory();
+}
+
 function fmtNum(n) { return String(n); }
 
 function fmtRu(n, decimals) {
