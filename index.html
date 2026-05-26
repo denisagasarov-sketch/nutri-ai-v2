@@ -939,7 +939,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.60';
+const VERSION = '1.4.61';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2502,9 +2502,8 @@ function renderChart() {
   const день    = history.map(h => { const s = getScoresForDay(h); return s.dayTotal || s.total || 0; });
   const _chartProfile = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
   const темп    = history.map(h => {
-    const _def = h.deficit !== undefined ? h.deficit
-      : ((h.restKcal || _chartProfile.restKcal || 1800) + (h.actKcal || 0)) - (h.kcal || 0);
-    return Math.round(_def / 7700 * 30 * 10) / 10;
+    const def = calcDeficit(h, _chartProfile);
+    return Math.round(def * 30 / 7700 * 10) / 10;
   });
 
   function bc(v) {
