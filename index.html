@@ -260,6 +260,19 @@ input::placeholder{color:var(--muted)}
 .profile-edit-hint{font-size:11px;color:var(--muted)}
 #profileEditSheet{position:fixed;bottom:0;left:0;right:0;max-height:88vh;overflow-y:auto;background:var(--card);border-radius:16px 16px 0 0;padding:20px 16px 40px;z-index:200;transform:translateY(100%);transition:transform .3s ease}
 .recalc-check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:14px 0 4px;cursor:pointer}
+/* ── Settings inline form ── */
+.st-btn{width:100%;background:rgba(255,255,255,0.04);color:#555;border-radius:8px;padding:8px 4px;font-size:11px;border:none;cursor:pointer;transition:background .15s,color .15s;text-align:center}
+.st-btn.active{background:rgba(255,255,255,0.08);color:#fff}
+.st-section-title{font-size:10px;font-weight:700;letter-spacing:.7px;color:#555;margin-bottom:8px;margin-top:2px}
+.st-calc-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:0.5px solid rgba(255,255,255,0.06)}
+.st-calc-row:last-child{border-bottom:none}
+.st-input{width:100%;background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:8px;color:#fff;font-size:13px;outline:none;text-align:center;box-sizing:border-box}
+.st-input::placeholder{color:#333}
+.st-radio-row{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px;color:#aaa;cursor:pointer;border-bottom:0.5px solid rgba(255,255,255,0.05)}
+.st-radio-row:last-child{border-bottom:none}
+.st-radio-row input[type=radio]{accent-color:#a78bfa}
+.st-level-card{background:rgba(255,255,255,0.03);border-radius:8px;padding:10px 12px;margin-top:8px}
+input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 /* ── Help bottom sheet ── */
 #helpSheet{position:fixed;bottom:0;left:0;right:0;max-height:80vh;overflow-y:auto;background:var(--card);border-radius:16px 16px 0 0;padding:20px 16px;z-index:200;transform:translateY(100%);transition:transform .3s ease}
 #helpSheet h3{font-size:14px;color:#a78bfa;margin:16px 0 6px}
@@ -537,11 +550,77 @@ input::placeholder{color:var(--muted)}
       <button onclick="openHelp()" style="background:none;border:none;font-size:22px;cursor:pointer;padding:4px;line-height:1">❓</button>
     </div>
 
-    <!-- Profile card -->
+    <!-- Inline profile form: ПРОФИЛЬ -->
     <div class="card">
-      <div class="card-ttl">Профиль</div>
-      <div id="profileCard"></div>
+      <div class="st-section-title">ПРОФИЛЬ</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+        <div>
+          <div style="font-size:10px;color:#555;margin-bottom:4px">Возраст</div>
+          <input type="number" id="st-age" class="st-input" min="10" max="100" placeholder="лет" oninput="onSettingsChange()">
+        </div>
+        <div>
+          <div style="font-size:10px;color:#555;margin-bottom:4px">Вес кг</div>
+          <input type="number" id="st-weight" class="st-input" min="30" max="250" placeholder="кг" oninput="onSettingsChange()">
+        </div>
+        <div>
+          <div style="font-size:10px;color:#555;margin-bottom:4px">Рост см</div>
+          <input type="number" id="st-height" class="st-input" min="100" max="250" placeholder="см" oninput="onSettingsChange()">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button id="st-gender-male" class="st-btn" onclick="setStGender('male')">♂ Мужчина</button>
+        <button id="st-gender-female" class="st-btn" onclick="setStGender('female')">♀ Женщина</button>
+      </div>
     </div>
+
+    <!-- Inline profile form: ЦЕЛЬ -->
+    <div class="card">
+      <div class="st-section-title">ЦЕЛЬ</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px">
+        <button id="st-goal-loss" class="st-btn" onclick="setStGoal('loss')">Похудеть</button>
+        <button id="st-goal-maintain" class="st-btn" onclick="setStGoal('maintain')">Держать вес</button>
+        <button id="st-goal-gain" class="st-btn" onclick="setStGoal('gain')">Набрать</button>
+      </div>
+      <div id="st-mode-block">
+        <div style="font-size:10px;color:#555;margin-bottom:6px">Режим</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          <button id="st-mode-mild" class="st-btn" onclick="setStMode('mild')">Мягкий</button>
+          <button id="st-mode-moderate" class="st-btn" onclick="setStMode('moderate')">Умеренный</button>
+          <button id="st-mode-intense" class="st-btn" onclick="setStMode('intense')">Интенсивный</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inline profile form: АКТИВНОСТЬ -->
+    <div class="card">
+      <div class="st-section-title">АКТИВНОСТЬ</div>
+      <label class="st-radio-row">
+        <input type="radio" name="st-actmode" id="st-act-manual" value="manual" onchange="onStActModeChange()">
+        Ввожу из Garmin каждый день
+      </label>
+      <label class="st-radio-row">
+        <input type="radio" name="st-actmode" id="st-act-level" value="level" onchange="onStActModeChange()">
+        Выбрать средний уровень
+      </label>
+      <div id="st-garmin-block" style="margin-top:10px">
+        <div style="font-size:10px;color:#555;margin-bottom:4px">Покой ккал/день</div>
+        <input type="number" id="st-restKcal" class="st-input" placeholder="например 2100" oninput="onSettingsChange()" style="text-align:left;padding:10px 12px">
+        <div id="st-bmr-hint" style="font-size:11px;color:#555;margin-top:5px"></div>
+      </div>
+      <div id="st-level-block" style="display:none;margin-top:10px">
+        <input type="range" id="st-actLevel" class="st-range" min="0" max="9" step="1" value="1" oninput="onStActLevelChange()">
+        <div id="st-level-card" class="st-level-card"></div>
+      </div>
+    </div>
+
+    <!-- Расчёт (информационный) -->
+    <div class="card" id="st-calc-card" style="display:none">
+      <div class="st-section-title">РАСЧЁТ</div>
+      <div id="st-calc-info"></div>
+    </div>
+
+    <!-- Кнопка Сохранить -->
+    <button onclick="saveSettingsProfile()" style="width:100%;background:rgba(167,139,250,0.12);border:0.5px solid rgba(167,139,250,0.25);color:#a78bfa;border-radius:12px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px">Сохранить</button>
 
     <!-- API Key -->
     <div class="card">
@@ -861,7 +940,7 @@ input::placeholder{color:var(--muted)}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.48';
+const VERSION = '1.4.49';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -923,6 +1002,19 @@ cleanliness: clean=натуральная еда, snack=лёгкие снеки,
 //  PRESET & STATE
 // ═══════════════════════════════════════════
 const PRESET = [];
+
+const actLevels = [
+  { name: 'Ничего',                desc: 'Весь день сижу',               act: 0   },
+  { name: 'Почти ничего',          desc: 'Иногда выхожу подышать',       act: 50  },
+  { name: 'Редкие прогулки',       desc: '2–3 по 30 мин',               act: 100 },
+  { name: 'Гуляю регулярно',       desc: '30–40 мин каждый день',        act: 170 },
+  { name: 'Зал 3× + прогулки',     desc: '',                             act: 210 },
+  { name: 'Активная ходьба',       desc: '~10 000 шагов',                act: 320 },
+  { name: 'Зал 4–5× + прогулки',   desc: '',                             act: 420 },
+  { name: 'Ходьба + зал 3×',       desc: '5 км быстро + зал 3×/нед',    act: 520 },
+  { name: 'Ходьба + зал каждый день', desc: '',                          act: 650 },
+  { name: 'Физическая работа',     desc: 'Весь день на ногах',           act: 700 },
+];
 
 let foods      = lsGet('foods',   []);
 let history    = lsGet('history', null) ?? [...PRESET];
@@ -1248,7 +1340,7 @@ function goTo(name) {
   if (name === 'today')    updateTodayScreen();
   if (name === 'history')  onHistoryTabShow();
   if (name === 'day')      renderDayView();
-  if (name === 'settings') { renderUserFoodsList(); renderProfileCard(); }
+  if (name === 'settings') { renderUserFoodsList(); renderProfileCard(); populateSettingsForm(); }
 }
 
 function setDayTabVisible(show) {
@@ -2544,6 +2636,189 @@ function recalcAllHistory() {
   });
   history = updated;
   lsSave('history', updated);
+}
+
+// ═══════════════════════════════════════════
+//  SETTINGS INLINE FORM
+// ═══════════════════════════════════════════
+let _stGender = 'male';
+let _stGoal   = 'loss';
+let _stMode   = 'moderate';
+
+function _stSetBtn(id, active) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('active', active);
+}
+
+function _stUpdateGroup(ids, activeId) {
+  ids.forEach(id => _stSetBtn(id, id === activeId));
+}
+
+function setStGender(g) {
+  _stGender = g;
+  _stUpdateGroup(['st-gender-male','st-gender-female'], 'st-gender-' + g);
+  onSettingsChange();
+}
+
+function setStGoal(g) {
+  _stGoal = g;
+  _stUpdateGroup(['st-goal-loss','st-goal-maintain','st-goal-gain'], 'st-goal-' + g);
+  const modeBlock = document.getElementById('st-mode-block');
+  if (modeBlock) {
+    modeBlock.style.opacity = g === 'maintain' ? '0.35' : '1';
+    modeBlock.style.pointerEvents = g === 'maintain' ? 'none' : '';
+  }
+  onSettingsChange();
+}
+
+function setStMode(m) {
+  _stMode = m;
+  _stUpdateGroup(['st-mode-mild','st-mode-moderate','st-mode-intense'], 'st-mode-' + m);
+  onSettingsChange();
+}
+
+function onStActModeChange() {
+  const isManual = document.getElementById('st-act-manual')?.checked;
+  const garmin = document.getElementById('st-garmin-block');
+  const level  = document.getElementById('st-level-block');
+  if (garmin) garmin.style.display = isManual ? '' : 'none';
+  if (level)  level.style.display  = isManual ? 'none' : '';
+  onSettingsChange();
+}
+
+function onStActLevelChange() {
+  const idx = parseInt(document.getElementById('st-actLevel')?.value) || 0;
+  _renderStLevelCard(idx);
+  onSettingsChange();
+}
+
+function _renderStLevelCard(idx) {
+  const lv   = actLevels[idx];
+  const card = document.getElementById('st-level-card');
+  if (!card || !lv) return;
+  card.innerHTML = '<div style="font-size:13px;color:#ccc;font-weight:600">' + lv.name + '</div>'
+    + (lv.desc ? '<div style="font-size:11px;color:#555;margin-top:2px">' + lv.desc + '</div>' : '')
+    + '<div style="font-size:11px;color:#666;margin-top:6px">+' + lv.act + ' ккал активности</div>';
+}
+
+function onSettingsChange() {
+  const age    = parseInt(document.getElementById('st-age')?.value)    || 0;
+  const weight = parseInt(document.getElementById('st-weight')?.value) || 0;
+  const height = parseInt(document.getElementById('st-height')?.value) || 0;
+  const calcCard = document.getElementById('st-calc-card');
+
+  if (!age || !weight || !height) {
+    if (calcCard) calcCard.style.display = 'none';
+    return;
+  }
+
+  const bmr = calcBMR(_stGender, weight, height, age);
+  const restHint = Math.round(bmr * 1.2);
+  const hint = document.getElementById('st-bmr-hint');
+  if (hint) hint.textContent = 'Если не знаешь — BMR × 1,2 = ' + restHint + ' ккал';
+
+  const isManual = document.getElementById('st-act-manual')?.checked;
+  let tdee;
+  if (isManual) {
+    const restKcal = parseInt(document.getElementById('st-restKcal')?.value) || restHint;
+    tdee = restKcal;
+  } else {
+    const idx = parseInt(document.getElementById('st-actLevel')?.value) || 0;
+    tdee = Math.round(bmr * 1.2) + actLevels[idx].act;
+  }
+
+  const actCoef = tdee / bmr;
+  const t = calcTargets({ gender: _stGender, age, weight, height, actCoef, goal: _stGoal, mode: _stMode });
+  if (calcCard) calcCard.style.display = '';
+  const info = document.getElementById('st-calc-info');
+  if (info) info.innerHTML =
+    '<div class="st-calc-row"><span style="color:#555">BMR</span><span>' + Math.round(bmr) + ' ккал</span></div>'
+    + '<div class="st-calc-row"><span style="color:#555">TDEE</span><span>' + tdee + ' ккал</span></div>'
+    + '<div class="st-calc-row"><span style="color:#555">Норма ккал</span><span style="color:#a78bfa;font-weight:600">' + t.kcal + ' ккал</span></div>';
+}
+
+function populateSettingsForm() {
+  const p = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
+  _stGender = p.gender || 'male';
+  _stGoal   = p.goal   || 'loss';
+  _stMode   = p.mode   || 'moderate';
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+  set('st-age',    p.age);
+  set('st-weight', p.weight);
+  set('st-height', p.height);
+
+  _stUpdateGroup(['st-gender-male','st-gender-female'], 'st-gender-' + _stGender);
+  _stUpdateGroup(['st-goal-loss','st-goal-maintain','st-goal-gain'], 'st-goal-' + _stGoal);
+  _stUpdateGroup(['st-mode-mild','st-mode-moderate','st-mode-intense'], 'st-mode-' + _stMode);
+
+  const modeBlock = document.getElementById('st-mode-block');
+  if (modeBlock) {
+    modeBlock.style.opacity = _stGoal === 'maintain' ? '0.35' : '1';
+    modeBlock.style.pointerEvents = _stGoal === 'maintain' ? 'none' : '';
+  }
+
+  const actMode = p.actMode || 'manual';
+  const manualEl = document.getElementById('st-act-manual');
+  const levelEl  = document.getElementById('st-act-level');
+  if (manualEl) manualEl.checked = actMode === 'manual';
+  if (levelEl)  levelEl.checked  = actMode === 'level';
+
+  if (p.restKcal) set('st-restKcal', p.restKcal);
+
+  const idx = p.actLevelIdx != null ? p.actLevelIdx : 1;
+  set('st-actLevel', idx);
+  _renderStLevelCard(idx);
+
+  onStActModeChange();
+  onSettingsChange();
+}
+
+function saveSettingsProfile() {
+  const age    = parseInt(document.getElementById('st-age')?.value)    || null;
+  const weight = parseInt(document.getElementById('st-weight')?.value) || null;
+  const height = parseInt(document.getElementById('st-height')?.value) || null;
+
+  const isManual   = document.getElementById('st-act-manual')?.checked;
+  const actMode    = isManual ? 'manual' : 'level';
+  const actLevelIdx = parseInt(document.getElementById('st-actLevel')?.value) || 0;
+  const restKcal   = parseInt(document.getElementById('st-restKcal')?.value) || 0;
+
+  let actCoef = 1.2;
+  if (age && weight && height) {
+    const bmr = calcBMR(_stGender, weight, height, age);
+    if (actMode === 'level') {
+      const lv = actLevels[actLevelIdx];
+      actCoef = (Math.round(bmr * 1.2) + lv.act) / bmr;
+    } else {
+      actCoef = restKcal > 0 ? restKcal / bmr : 1.2;
+    }
+  }
+
+  const trackActivity = actMode === 'manual';
+  const profile = { gender: _stGender, age, weight, height, actCoef, actMode, actLevelIdx, restKcal, goal: _stGoal, mode: _stMode, trackActivity };
+
+  if (age && weight && height) {
+    const t = calcTargets(profile);
+    profile.kcal = t.kcal; profile.prot = t.prot; profile.fat = t.fat; profile.carb = t.carb; profile.tdee = t.tdee;
+  }
+
+  const prevGoal = lsGet('profile', {}).goal;
+  lsSave('profile', profile);
+  loadGoals();
+  updateTotals();
+  updateDayScoreLabels();
+  renderProfileCard();
+  requestAnimationFrame(() => { renderHistory(); });
+  toast('Профиль сохранён ✅');
+
+  const firstTime  = !localStorage.getItem('helpShownAfterProfile');
+  const goalChanged = prevGoal && prevGoal !== profile.goal;
+  if (firstTime || goalChanged) {
+    localStorage.setItem('helpShownAfterProfile', profile.goal);
+    setTimeout(() => openHelp(), 500);
+  }
 }
 
 function saveProfileFromSheet() {
