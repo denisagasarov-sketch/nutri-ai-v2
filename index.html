@@ -939,7 +939,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.59';
+const VERSION = '1.4.60';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1268,8 +1268,7 @@ function updateDayScoreLabels() {
 
 // ── onboarding ──
 function showOnboarding() {
-  _obGoal = 'loss';
-  _obMode = 'moderate';
+  _obDir = 'loss';
   _gender['ob'] = 'male';
   ['ob-age','ob-weight','ob-height'].forEach(id => {
     const el = document.getElementById(id);
@@ -1279,12 +1278,8 @@ function showOnboarding() {
   const gf = document.getElementById('obGenderFemale');
   if (gm) gm.classList.add('active');
   if (gf) gf.classList.remove('active');
-  _stUpdateGroup(['ob-goal-loss','ob-goal-maintain','ob-goal-gain'], 'ob-goal-' + _obGoal);
-  _stUpdateGroup(['ob-mode-mild','ob-mode-moderate','ob-mode-intense'], 'ob-mode-' + _obMode);
-  const mb = document.getElementById('ob-mode-block');
-  if (mb) mb.style.display = '';
   document.getElementById('ob-err').textContent = '';
-  document.getElementById('ob-calc-row').textContent = '';
+  obSetDir('loss');
   document.getElementById('onboarding').style.display = 'flex';
 }
 
@@ -1297,27 +1292,47 @@ function submitOnboarding() {
     return;
   }
   const gender = _gender['ob'] || 'male';
-  const bmr    = calcBMR(gender, weight, height, age);
+  const paceSlider = document.getElementById('ob-pace-slider');
+  const rawPace = paceSlider ? (parseInt(paceSlider.value) / 10) : -1.5;
+  const paceKgMonth = _obDir === 'maintain' ? 0 : rawPace;
+  const bmr      = Math.round(calcBMR(gender, weight, height, age));
   const restKcal = Math.round(bmr * 1.1);
-  const actCoef  = restKcal / bmr;
-  const profile  = { gender, age, weight, height, actCoef, actMode: 'manual',
-    goal: _obGoal, mode: _obMode, trackActivity: true, restKcal };
-  const t = calcTargets(profile);
-  Object.assign(profile, { kcal: t.kcal, prot: t.prot, fat: t.fat, carb: t.carb,
-    tdee: t.tdee, restKcal: t.restKcal || restKcal });
+  const defDay   = Math.round(paceKgMonth * 7700 / 30);
+  const goalKcal = Math.max(1200, restKcal + defDay);
+  const protCoef = 2.0;
+  const fatPct   = 0.25;
+  const prot = Math.round(protCoef * weight);
+  const fat  = Math.round(goalKcal * fatPct / 9);
+  const carb = Math.max(0, Math.round((goalKcal - prot * 4 - fat * 9) / 4));
+  const profile = {
+    gender, age, weight, height,
+    actCoef: 1.1, actMode: 'manual', trackActivity: true,
+    goal: _obDir, paceKgMonth, protCoef, fatPct,
+    kcal: goalKcal, prot, fat, carb, restKcal, tdee: restKcal
+  };
   lsSave('profile', profile);
   lsSave('profileHistory', [{ date: new Date().toISOString(), weight: profile.weight,
-    goal: profile.goal, mode: profile.mode, goalKcal: profile.kcal, restKcal: profile.restKcal }]);
+    goal: profile.goal, paceKgMonth, goalKcal, restKcal }]);
   document.getElementById('onboarding').style.display = 'none';
   initApp();
 }
 
 function skipOnboarding() {
+  const bmr = Math.round(calcBMR('male', 70, 175, 30));
+  const restKcal = Math.round(bmr * 1.1);
+  const paceKgMonth = -1.5;
+  const defDay = Math.round(paceKgMonth * 7700 / 30);
+  const goalKcal = Math.max(1200, restKcal + defDay);
+  const protCoef = 2.0;
+  const fatPct = 0.25;
+  const prot = Math.round(protCoef * 70);
+  const fat  = Math.round(goalKcal * fatPct / 9);
+  const carb = Math.max(0, Math.round((goalKcal - prot * 4 - fat * 9) / 4));
   const defaultProfile = {
     gender: 'male', age: 30, weight: 70, height: 175,
-    actCoef: 1.1, goal: 'loss', mode: 'moderate',
-    trackActivity: true, kcal: 1800, prot: 150, fat: 60, carb: 165,
-    restKcal: 1814, skipped: true
+    actCoef: 1.1, actMode: 'manual', trackActivity: true,
+    goal: 'loss', paceKgMonth, protCoef, fatPct,
+    kcal: goalKcal, prot, fat, carb, restKcal, tdee: restKcal, skipped: true
   };
   lsSave('profile', defaultProfile);
   localStorage.setItem('app_initialized', '1');
@@ -2700,8 +2715,7 @@ function recalcAllHistory() {
 let _stGender = 'male';
 let _stGoal   = 'loss';
 let _stMode   = 'moderate';
-let _obGoal   = 'loss';
-let _obMode   = 'moderate';
+let _obDir    = 'loss';
 let _pfDir    = 'loss';
 
 function _stSetBtn(id, active) {
@@ -2988,36 +3002,75 @@ function pfRecalc() {
   }
 }
 
-function obSetGoal(g) {
-  _obGoal = g;
-  _stUpdateGroup(['ob-goal-loss','ob-goal-maintain','ob-goal-gain'], 'ob-goal-' + g);
-  const mb = document.getElementById('ob-mode-block');
-  if (mb) mb.style.display = g === 'maintain' ? 'none' : '';
-  obUpdateCalc();
+function obSetDir(dir) {
+  _obDir = dir;
+  ['loss','maintain','gain'].forEach(d => {
+    const btn = document.getElementById('ob-dir-' + d);
+    if (!btn) return;
+    btn.style.background = d === dir ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)';
+    btn.style.color      = d === dir ? '#ccc' : '#333';
+  });
+  const paceBlock  = document.getElementById('ob-pace-block');
+  const paceSlider = document.getElementById('ob-pace-slider');
+  const paceValEl  = document.getElementById('ob-pace-val');
+  if (dir === 'maintain') {
+    if (paceBlock) paceBlock.style.display = 'none';
+  } else if (dir === 'gain') {
+    if (paceBlock) paceBlock.style.display = '';
+    if (paceSlider) {
+      paceSlider.min = '0'; paceSlider.max = '20'; paceSlider.style.accentColor = '#a78bfa';
+      if (parseInt(paceSlider.value) < 0) paceSlider.value = '10';
+    }
+    if (paceValEl) paceValEl.style.color = '#a78bfa';
+  } else {
+    if (paceBlock) paceBlock.style.display = '';
+    if (paceSlider) {
+      paceSlider.min = '-30'; paceSlider.max = '0'; paceSlider.style.accentColor = '#1D9E75';
+      if (parseInt(paceSlider.value) > 0) paceSlider.value = '-15';
+    }
+    if (paceValEl) paceValEl.style.color = '#1D9E75';
+  }
+  obRecalc();
 }
 
-function obSetMode(m) {
-  _obMode = m;
-  _stUpdateGroup(['ob-mode-mild','ob-mode-moderate','ob-mode-intense'], 'ob-mode-' + m);
-  obUpdateCalc();
-}
-
-function obUpdateCalc() {
-  const calcEl = document.getElementById('ob-calc-row');
-  if (!calcEl) return;
+function obRecalc() {
   const age    = parseInt(document.getElementById('ob-age')?.value)    || 0;
   const weight = parseInt(document.getElementById('ob-weight')?.value) || 0;
   const height = parseInt(document.getElementById('ob-height')?.value) || 0;
   const gender = _gender['ob'] || 'male';
-  if (!age || !weight || !height) { calcEl.textContent = ''; return; }
+  const paceSlider = document.getElementById('ob-pace-slider');
+  const rawPace    = paceSlider ? (parseInt(paceSlider.value) / 10) : -1.5;
+  const paceKgMonth = _obDir === 'maintain' ? 0 : rawPace;
+
+  const paceValEl = document.getElementById('ob-pace-val');
+  const totalEl   = document.getElementById('ob-total-kcal');
+  const macroEl   = document.getElementById('ob-macro-line');
+
+  if (paceValEl && _obDir !== 'maintain') {
+    const sign = paceKgMonth > 0 ? '+' : '−';
+    paceValEl.textContent = sign + Math.abs(paceKgMonth).toFixed(1).replace('.', ',') + ' кг/мес';
+  } else if (paceValEl) {
+    paceValEl.textContent = '0 кг/мес';
+  }
+
+  if (!age || !weight || !height) {
+    if (totalEl) totalEl.textContent = '—';
+    if (macroEl) { macroEl.textContent = 'заполни данные выше'; macroEl.style.color = '#333'; }
+    return;
+  }
+
   const bmr      = Math.round(calcBMR(gender, weight, height, age));
   const restKcal = Math.round(bmr * 1.1);
-  const actCoef  = restKcal / bmr;
-  const t = calcTargets({ gender, age, weight, height, actCoef, goal: _obGoal, mode: _obMode });
-  const defPerDay = restKcal - t.kcal;
-  const kgMon  = Math.abs(Math.round(defPerDay * 30 / 7700 * 10) / 10);
-  const kgSign = defPerDay >= 0 ? '−' : '+';
-  calcEl.textContent = 'цель ' + t.kcal + ' ккал/день · ' + kgSign + kgMon + ' кг/мес';
+  const defDay   = Math.round(paceKgMonth * 7700 / 30);
+  const goalKcal = Math.max(1200, restKcal + defDay);
+  const protCoef = 2.0;
+  const fatPct   = 0.25;
+  const prot     = Math.round(protCoef * weight);
+  const fat      = Math.round(goalKcal * fatPct / 9);
+  const carb     = Math.max(0, Math.round((goalKcal - prot * 4 - fat * 9) / 4));
+
+  if (totalEl) totalEl.textContent = goalKcal + ' ккал';
+  if (macroEl) macroEl.innerHTML = 'Б ' + prot + 'г · Ж ' + fat + 'г · У ' + carb + 'г';
 }
 
 function saveProfileFromSheet() {
@@ -3952,61 +4005,63 @@ function lsSave(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catc
 <!-- ONBOARDING OVERLAY -->
 <div id="onboarding" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;flex-direction:column;align-items:center;overflow-y:auto;padding:24px 16px 40px">
   <div style="width:100%;max-width:420px">
-    <h2 style="text-align:center;margin:0 0 20px;font-size:20px">Расскажи о себе</h2>
+    <div style="font-size:20px;font-weight:700;color:#e0e0ff;text-align:center;margin-bottom:4px">Расскажи о себе</div>
+    <div style="font-size:13px;color:#555;text-align:center;margin-bottom:16px">Настроим цели под тебя</div>
 
-    <div class="card" style="margin-bottom:0">
-
-      <!-- Пол -->
+    <div class="card" style="margin-bottom:12px">
       <div class="gender-tabs" style="margin-bottom:14px">
-        <button class="gender-tab active" id="obGenderMale"   onclick="setGender('male','ob')">♂ Мужчина</button>
-        <button class="gender-tab"        id="obGenderFemale" onclick="setGender('female','ob')">♀ Женщина</button>
+        <button class="gender-tab active" id="obGenderMale"   onclick="setGender('male','ob');obRecalc()">♂ Мужчина</button>
+        <button class="gender-tab"        id="obGenderFemale" onclick="setGender('female','ob');obRecalc()">♀ Женщина</button>
       </div>
-
-      <!-- Возраст · Вес · Рост -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
         <div>
           <div style="font-size:10px;color:#555;margin-bottom:4px;text-align:center">Возраст</div>
-          <input type="number" id="ob-age" class="st-input" min="10" max="100" placeholder="лет" oninput="obUpdateCalc()">
+          <input type="number" id="ob-age" class="st-input" min="10" max="100" placeholder="лет" oninput="obRecalc()">
         </div>
         <div>
           <div style="font-size:10px;color:#555;margin-bottom:4px;text-align:center">Вес кг</div>
-          <input type="number" id="ob-weight" class="st-input" min="30" max="250" placeholder="кг" oninput="obUpdateCalc()">
+          <input type="number" id="ob-weight" class="st-input" min="30" max="250" placeholder="кг" oninput="obRecalc()">
         </div>
         <div>
           <div style="font-size:10px;color:#555;margin-bottom:4px;text-align:center">Рост см</div>
-          <input type="number" id="ob-height" class="st-input" min="100" max="250" placeholder="см" oninput="obUpdateCalc()">
+          <input type="number" id="ob-height" class="st-input" min="100" max="250" placeholder="см" oninput="obRecalc()">
         </div>
       </div>
-
-      <!-- Цель -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
-        <button id="ob-goal-loss"     class="st-goal-btn" onclick="obSetGoal('loss')">Похудеть</button>
-        <button id="ob-goal-maintain" class="st-goal-btn" onclick="obSetGoal('maintain')">Держать</button>
-        <button id="ob-goal-gain"     class="st-goal-btn" onclick="obSetGoal('gain')">Набрать</button>
-      </div>
-
-      <!-- Интенсивность (скрыта при Держать) -->
-      <div id="ob-mode-block" style="margin-bottom:14px">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-          <button id="ob-mode-mild"     class="st-goal-btn" onclick="obSetMode('mild')">Мягко</button>
-          <button id="ob-mode-moderate" class="st-goal-btn" onclick="obSetMode('moderate')">Умеренно</button>
-          <button id="ob-mode-intense"  class="st-goal-btn" onclick="obSetMode('intense')">Интенсивно</button>
-        </div>
-      </div>
-
-      <!-- Расчёт -->
-      <div id="ob-calc-row" style="font-size:13px;color:#555;text-align:center;min-height:20px;margin-bottom:14px"></div>
-
-      <!-- Ошибка -->
-      <div id="ob-err" style="color:var(--kcal);font-size:13px;text-align:center;min-height:18px;margin-bottom:8px"></div>
-
-      <!-- Кнопка Сохранить -->
-      <button onclick="submitOnboarding()" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px">Сохранить и начать →</button>
-
-      <!-- Пропустить -->
-      <button onclick="skipOnboarding()" style="width:100%;padding:10px;background:none;border:none;cursor:pointer;font-size:13px;color:#444;text-align:center">Пропустить</button>
-
     </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;gap:4px;margin-bottom:10px">
+        <button id="ob-dir-loss"     style="flex:1;padding:8px;border-radius:8px;font-size:12px;text-align:center;border:none;cursor:pointer;background:rgba(255,255,255,0.03);color:#333" onclick="obSetDir('loss')">Худею</button>
+        <button id="ob-dir-maintain" style="flex:1;padding:8px;border-radius:8px;font-size:12px;text-align:center;border:none;cursor:pointer;background:rgba(255,255,255,0.03);color:#333" onclick="obSetDir('maintain')">Держу</button>
+        <button id="ob-dir-gain"     style="flex:1;padding:8px;border-radius:8px;font-size:12px;text-align:center;border:none;cursor:pointer;background:rgba(255,255,255,0.03);color:#333" onclick="obSetDir('gain')">Набираю</button>
+      </div>
+      <div style="height:0.5px;background:#0f0f1a;margin:8px 0"></div>
+      <div id="ob-pace-block" style="padding:8px 0 2px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-size:13px;color:#888">Темп похудения</div>
+            <div style="font-size:10px;color:#2a2a4a;margin-top:1px">без физической активности</div>
+          </div>
+          <span id="ob-pace-val" style="font-size:17px;font-weight:600;color:#1D9E75"></span>
+        </div>
+        <input type="range" id="ob-pace-slider" min="-30" max="0" step="1" value="-15" style="width:100%;cursor:pointer;accent-color:#1D9E75" oninput="obRecalc()">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#2a2a4a;margin-top:2px">
+          <span>−3,0</span><span>−1,5</span><span>0</span>
+        </div>
+      </div>
+      <div style="height:0.5px;background:#0f0f1a;margin:8px 0"></div>
+      <div style="background:#0f0f1a;border-radius:10px;padding:10px 12px;margin-top:6px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span style="font-size:11px;color:#555">Итого</span>
+          <span id="ob-total-kcal" style="font-size:20px;font-weight:700;color:#fff">—</span>
+        </div>
+        <div id="ob-macro-line" style="font-size:10px;color:#333;margin-top:4px">заполни данные выше</div>
+      </div>
+    </div>
+
+    <div id="ob-err" style="color:var(--kcal);font-size:13px;text-align:center;min-height:18px;margin-bottom:8px"></div>
+    <button onclick="submitOnboarding()" style="width:100%;background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px">Сохранить и начать →</button>
+    <button onclick="skipOnboarding()" style="width:100%;padding:12px;background:none;border:none;cursor:pointer;font-size:13px;color:#444">Пропустить</button>
   </div>
 </div>
 
