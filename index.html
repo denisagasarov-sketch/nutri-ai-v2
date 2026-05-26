@@ -263,6 +263,8 @@ input::placeholder{color:var(--muted)}
 /* ── Settings inline form ── */
 .st-btn{width:100%;background:rgba(255,255,255,0.04);color:#555;border-radius:8px;padding:8px 4px;font-size:11px;border:none;cursor:pointer;transition:background .15s,color .15s;text-align:center}
 .st-btn.active{background:rgba(255,255,255,0.08);color:#fff}
+.st-goal-btn{width:100%;background:rgba(255,255,255,0.03);color:#333;border-radius:8px;padding:7px 4px;font-size:11px;border:none;cursor:pointer;transition:background .15s,color .15s;text-align:center}
+.st-goal-btn.active{background:rgba(255,255,255,0.08);color:#ccc}
 .st-section-title{font-size:10px;font-weight:700;letter-spacing:.7px;color:#555;margin-bottom:8px;margin-top:2px}
 .st-calc-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:0.5px solid rgba(255,255,255,0.06)}
 .st-calc-row:last-child{border-bottom:none}
@@ -566,113 +568,72 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
   <section class="sec" id="sec-settings">
     <div class="sec-hdr">
       <h2>Настройки</h2>
-      <button onclick="openHelp()" style="background:none;border:none;font-size:22px;cursor:pointer;padding:4px;line-height:1">❓</button>
     </div>
 
-    <!-- Inline profile form: ПРОФИЛЬ -->
-    <div class="card">
-      <div class="st-section-title">ПРОФИЛЬ</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+    <!-- КАРТОЧКА 1: МОИ ПРОДУКТЫ -->
+    <div class="card" onclick="stToggleMyProducts()" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
-          <div style="font-size:10px;color:#555;margin-bottom:4px">Возраст</div>
-          <input type="number" id="st-age" class="st-input" min="10" max="100" placeholder="лет" oninput="onSettingsChange()">
+          <div style="font-size:15px;color:#ccc">Мои продукты</div>
+          <div id="st-prods-count" style="font-size:11px;color:#2a2a4a;margin-top:2px">0 продуктов сохранено</div>
         </div>
+        <span style="color:#555;font-size:18px">›</span>
+      </div>
+      <div id="st-prods-expand" style="display:none;margin-top:10px" onclick="event.stopPropagation()">
+        <div id="userFoodsList"></div>
+      </div>
+    </div>
+
+    <!-- КАРТОЧКА 2: ЦЕЛЬ -->
+    <div class="card">
+      <div class="card-ttl">ЦЕЛЬ</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">
         <div>
-          <div style="font-size:10px;color:#555;margin-bottom:4px">Вес кг</div>
-          <input type="number" id="st-weight" class="st-input" min="30" max="250" placeholder="кг" oninput="onSettingsChange()">
+          <div style="font-size:14px;color:#ccc">Вес</div>
+          <div style="font-size:11px;color:#2a2a4a;margin-top:2px">обновляй раз в месяц</div>
         </div>
+        <input type="number" id="st-weight" class="st-input" min="30" max="250" placeholder="кг" oninput="stUpdateCalc()" style="width:72px;text-align:right;padding:6px 8px">
+      </div>
+      <div style="padding:10px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+          <button id="st-goal-loss"     class="st-goal-btn" onclick="setStGoal('loss')">Похудеть</button>
+          <button id="st-goal-maintain" class="st-goal-btn" onclick="setStGoal('maintain')">Держать</button>
+          <button id="st-goal-gain"     class="st-goal-btn" onclick="setStGoal('gain')">Набрать</button>
+        </div>
+        <div id="st-mode-block">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+            <button id="st-mode-mild"     class="st-goal-btn" onclick="setStMode('mild')">Мягко</button>
+            <button id="st-mode-moderate" class="st-goal-btn" onclick="setStMode('moderate')">Умеренно</button>
+            <button id="st-mode-intense"  class="st-goal-btn" onclick="setStMode('intense')">Интенсивно</button>
+          </div>
+        </div>
+      </div>
+      <div id="st-calc-row" style="font-size:11px;color:#444;padding:8px 0;min-height:20px"></div>
+      <button onclick="saveSettingsProfile()" style="width:100%;background:rgba(167,139,250,0.1);border:0.5px solid rgba(167,139,250,0.2);color:#a78bfa;border-radius:12px;padding:13px;font-size:15px;font-weight:600;cursor:pointer">Сохранить</button>
+    </div>
+
+    <!-- КАРТОЧКА 3: РЕДКО -->
+    <div class="card">
+      <div class="card-ttl">РЕДКО</div>
+
+      <div onclick="openProfileEdit()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">
         <div>
-          <div style="font-size:10px;color:#555;margin-bottom:4px">Рост см</div>
-          <input type="number" id="st-height" class="st-input" min="100" max="250" placeholder="см" oninput="onSettingsChange()">
+          <div style="font-size:14px;color:#ccc">Профиль</div>
+          <div id="st-profile-sub" style="font-size:11px;color:#555;margin-top:2px">возраст · рост · пол · БЖУ</div>
         </div>
+        <span style="color:#555;font-size:18px">›</span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button id="st-gender-male" class="st-btn" onclick="setStGender('male')">♂ Мужчина</button>
-        <button id="st-gender-female" class="st-btn" onclick="setStGender('female')">♀ Женщина</button>
-      </div>
-    </div>
 
-    <!-- Inline profile form: ЦЕЛЬ -->
-    <div class="card">
-      <div class="st-section-title">ЦЕЛЬ</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px">
-        <button id="st-goal-loss" class="st-btn" onclick="setStGoal('loss')">Похудеть</button>
-        <button id="st-goal-maintain" class="st-btn" onclick="setStGoal('maintain')">Держать вес</button>
-        <button id="st-goal-gain" class="st-btn" onclick="setStGoal('gain')">Набрать</button>
+      <div onclick="stToggleGoalHistory()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">
+        <div style="font-size:14px;color:#ccc">История целей</div>
+        <span style="color:#555;font-size:18px">›</span>
       </div>
-      <div id="st-mode-block">
-        <div style="font-size:10px;color:#555;margin-bottom:6px">Режим</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-          <button id="st-mode-mild" class="st-btn" onclick="setStMode('mild')">Мягкий</button>
-          <button id="st-mode-moderate" class="st-btn" onclick="setStMode('moderate')">Умеренный</button>
-          <button id="st-mode-intense" class="st-btn" onclick="setStMode('intense')">Интенсивный</button>
-        </div>
+      <div id="st-goal-history-expand" style="display:none">
+        <div id="st-goal-history-list" style="padding:4px 0 8px"></div>
       </div>
-    </div>
 
-    <!-- Inline profile form: АКТИВНОСТЬ -->
-    <div class="card">
-      <div class="st-section-title">АКТИВНОСТЬ</div>
-      <label class="st-radio-row">
-        <input type="radio" name="st-actmode" id="st-act-manual" value="manual" onchange="onStActModeChange()">
-        Ввожу из Garmin каждый день
-      </label>
-      <label class="st-radio-row">
-        <input type="radio" name="st-actmode" id="st-act-level" value="level" onchange="onStActModeChange()">
-        Выбрать средний уровень
-      </label>
-      <div id="st-garmin-block" style="margin-top:10px">
-        <div style="font-size:10px;color:#555;margin-bottom:4px">Покой ккал/день</div>
-        <input type="number" id="st-restKcal" class="st-input" placeholder="например 2100" oninput="onSettingsChange()" style="text-align:left;padding:10px 12px">
-        <div id="st-bmr-hint" style="font-size:11px;color:#555;margin-top:5px"></div>
-      </div>
-      <div id="st-level-block" style="display:none;margin-top:10px">
-        <input type="range" id="st-actLevel" class="st-range" min="0" max="9" step="1" value="1" oninput="onStActLevelChange()">
-        <div id="st-level-card" class="st-level-card"></div>
-      </div>
-    </div>
-
-    <!-- Расчёт (информационный) -->
-    <div class="card" id="st-calc-card" style="display:none">
-      <div class="st-section-title">РАСЧЁТ</div>
-      <div id="st-calc-info"></div>
-    </div>
-
-    <!-- Кнопка Сохранить -->
-    <button onclick="saveSettingsProfile()" style="width:100%;background:rgba(167,139,250,0.12);border:0.5px solid rgba(167,139,250,0.25);color:#a78bfa;border-radius:12px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px">Сохранить</button>
-
-    <!-- API Key -->
-    <div class="card">
-      <div class="card-ttl">OpenAI API ключ</div>
-      <div class="set-row">
-        <label>Заменить ключ (начинается с sk-)</label>
-        <div class="row">
-          <input type="password" id="apiInput" placeholder="sk-…" autocomplete="off" />
-          <button class="btn" onclick="saveKey()">Сохранить</button>
-        </div>
-      </div>
-      <div id="keyStatus" style="font-size:12px;margin-top:4px"></div>
-      <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="restoreDefaultKey()">По умолчанию</button>
-    </div>
-
-    <!-- Backup -->
-    <div class="card">
-      <div class="card-ttl">Резервная копия</div>
-      <div style="display:flex;gap:9px">
-        <button class="btn btn-ghost" style="flex:1" onclick="exportData()">⬇ Экспорт</button>
-        <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('importFileInput').click()">⬆ Импорт</button>
-      </div>
-      <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
-    </div>
-
-    <!-- Display settings -->
-    <div class="card">
-      <div class="card-ttl">Интерфейс</div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">
-        <div>
-          <div style="font-size:14px;color:#ccc">Вкладка День</div>
-          <div style="font-size:11px;color:#555;margin-top:2px">Показывать детальный анализ дня</div>
-        </div>
+        <div style="font-size:14px;color:#ccc">Вкладка День</div>
         <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">
           <input type="checkbox" id="toggleDayTab" onchange="setDayTabVisible(this.checked)" style="opacity:0;width:0;height:0">
           <span id="toggleDayTabSlider" style="position:absolute;top:0;left:0;right:0;bottom:0;border-radius:24px;background:#333;transition:0.2s">
@@ -680,25 +641,42 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
           </span>
         </label>
       </div>
-    </div>
 
-    <!-- My Products -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div class="card-ttl" style="margin-bottom:0">Мои продукты</div>
-        <button class="btn-icon" onclick="openMyProductModal(null)" title="Добавить продукт" style="font-size:20px;line-height:1">+</button>
+      <div onclick="stToggleApiKey()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">
+        <div style="font-size:14px;color:#ccc">API ключ</div>
+        <span style="color:#555;font-size:18px">›</span>
       </div>
-      <div id="userFoodsList"></div>
-    </div>
+      <div id="st-apikey-expand" style="display:none;padding:8px 0 4px">
+        <label style="font-size:12px;color:#555">Заменить ключ (начинается с sk-)</label>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <input type="password" id="apiInput" placeholder="sk-…" autocomplete="off" style="flex:1" />
+          <button class="btn" onclick="saveKey()">Сохранить</button>
+        </div>
+        <div id="keyStatus" style="font-size:12px;margin-top:4px"></div>
+        <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="restoreDefaultKey()">По умолчанию</button>
+      </div>
 
-    <!-- Data management -->
-    <div class="card">
-      <div class="card-ttl">Управление данными</div>
-      <div style="display:flex;flex-direction:column;gap:9px">
-        <button class="btn btn-ghost btn-full" onclick="resetDay()">Сбросить текущий день</button>
-        <button class="btn btn-danger btn-full" onclick="deleteLastDay()">Удалить последний день</button>
-        <button class="btn btn-danger btn-full" onclick="clearHistory()">Очистить всю историю</button>
+      <div style="padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">
+        <div style="font-size:14px;color:#ccc;margin-bottom:8px">Резервная копия</div>
+        <div style="display:flex;gap:9px">
+          <button class="btn btn-ghost" style="flex:1" onclick="exportData()">⬇ Экспорт</button>
+          <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('importFileInput').click()">⬆ Импорт</button>
+        </div>
+        <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(event)">
       </div>
+
+      <div onclick="stToggleDataMgmt()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:12px 0">
+        <div style="font-size:14px;color:#ccc">Управление данными</div>
+        <span style="color:#555;font-size:18px">›</span>
+      </div>
+      <div id="st-datamgmt-expand" style="display:none;padding:0 0 4px">
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <button class="btn btn-ghost btn-full" onclick="resetDay()">Сбросить текущий день</button>
+          <button class="btn btn-danger btn-full" onclick="deleteLastDay()">Удалить последний день</button>
+          <button class="btn btn-danger btn-full" onclick="clearHistory()">Очистить всю историю</button>
+        </div>
+      </div>
+
     </div>
 
   </section>
@@ -959,7 +937,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.56';
+const VERSION = '1.4.57';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1391,7 +1369,7 @@ function goTo(name) {
   if (name === 'today')    updateTodayScreen();
   if (name === 'history')  onHistoryTabShow();
   if (name === 'day')      renderDayView();
-  if (name === 'settings') { renderUserFoodsList(); renderProfileCard(); populateSettingsForm(); }
+  if (name === 'settings') { stPopulate(); }
 }
 
 function setDayTabVisible(show) {
@@ -2748,10 +2726,7 @@ function setStGoal(g) {
   _stGoal = g;
   _stUpdateGroup(['st-goal-loss','st-goal-maintain','st-goal-gain'], 'st-goal-' + g);
   const modeBlock = document.getElementById('st-mode-block');
-  if (modeBlock) {
-    modeBlock.style.opacity = g === 'maintain' ? '0.35' : '1';
-    modeBlock.style.pointerEvents = g === 'maintain' ? 'none' : '';
-  }
+  if (modeBlock) modeBlock.style.display = g === 'maintain' ? 'none' : '';
   onSettingsChange();
 }
 
@@ -2785,123 +2760,139 @@ function _renderStLevelCard(idx) {
     + '<div style="font-size:11px;color:#666;margin-top:6px">+' + lv.act + ' ккал активности</div>';
 }
 
-function onSettingsChange() {
-  const age    = parseInt(document.getElementById('st-age')?.value)    || 0;
-  const weight = parseInt(document.getElementById('st-weight')?.value) || 0;
-  const height = parseInt(document.getElementById('st-height')?.value) || 0;
-  const calcCard = document.getElementById('st-calc-card');
+function onSettingsChange() { stUpdateCalc(); }
 
-  if (!age || !weight || !height) {
-    if (calcCard) calcCard.style.display = 'none';
-    return;
-  }
-
-  const bmr = calcBMR(_stGender, weight, height, age);
-  const restHint = Math.round(bmr * 1.2);
-  const hint = document.getElementById('st-bmr-hint');
-  if (hint) hint.textContent = 'Если не знаешь — BMR × 1,2 = ' + restHint + ' ккал';
-
-  const isManual = document.getElementById('st-act-manual')?.checked;
-  let tdee;
-  if (isManual) {
-    const restKcal = parseInt(document.getElementById('st-restKcal')?.value) || restHint;
-    tdee = restKcal;
-  } else {
-    const idx = parseInt(document.getElementById('st-actLevel')?.value) || 0;
-    tdee = Math.round(bmr * 1.2) + actLevels[idx].act;
-  }
-
-  const actCoef = tdee / bmr;
-  const t = calcTargets({ gender: _stGender, age, weight, height, actCoef, goal: _stGoal, mode: _stMode });
-  if (calcCard) calcCard.style.display = '';
-  const info = document.getElementById('st-calc-info');
-  if (info) info.innerHTML =
-    '<div class="st-calc-row"><span style="color:#555">BMR</span><span>' + Math.round(bmr) + ' ккал</span></div>'
-    + '<div class="st-calc-row"><span style="color:#555">TDEE</span><span>' + tdee + ' ккал</span></div>'
-    + '<div class="st-calc-row"><span style="color:#555">Норма ккал</span><span style="color:#a78bfa;font-weight:600">' + t.kcal + ' ккал</span></div>';
-}
-
-function populateSettingsForm() {
+function stPopulate() {
   const p = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
   _stGender = p.gender || 'male';
   _stGoal   = p.goal   || 'loss';
   _stMode   = p.mode   || 'moderate';
 
-  const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
-  set('st-age',    p.age);
-  set('st-weight', p.weight);
-  set('st-height', p.height);
+  const weightEl = document.getElementById('st-weight');
+  if (weightEl && p.weight) weightEl.value = p.weight;
 
-  _stUpdateGroup(['st-gender-male','st-gender-female'], 'st-gender-' + _stGender);
   _stUpdateGroup(['st-goal-loss','st-goal-maintain','st-goal-gain'], 'st-goal-' + _stGoal);
   _stUpdateGroup(['st-mode-mild','st-mode-moderate','st-mode-intense'], 'st-mode-' + _stMode);
 
   const modeBlock = document.getElementById('st-mode-block');
-  if (modeBlock) {
-    modeBlock.style.opacity = _stGoal === 'maintain' ? '0.35' : '1';
-    modeBlock.style.pointerEvents = _stGoal === 'maintain' ? 'none' : '';
+  if (modeBlock) modeBlock.style.display = _stGoal === 'maintain' ? 'none' : '';
+
+  const uFoods = lsGet('userFoods', []);
+  const countEl = document.getElementById('st-prods-count');
+  if (countEl) countEl.textContent = uFoods.length + ' продуктов сохранено';
+
+  const subEl = document.getElementById('st-profile-sub');
+  if (subEl) {
+    const gL = { loss: 'похудеть', maintain: 'держать', gain: 'набрать' };
+    subEl.textContent = (p.age && p.height)
+      ? p.age + ' лет · ' + p.height + ' см · ' + (p.gender === 'male' ? '♂' : '♀') + ' · ' + (gL[p.goal] || '')
+      : 'возраст · рост · пол · БЖУ';
   }
 
-  const actMode = p.actMode || 'manual';
-  const manualEl = document.getElementById('st-act-manual');
-  const levelEl  = document.getElementById('st-act-level');
-  if (manualEl) manualEl.checked = actMode === 'manual';
-  if (levelEl)  levelEl.checked  = actMode === 'level';
+  const _showDay = localStorage.getItem('showDayTab') === '1';
+  const _dayChk = document.getElementById('toggleDayTab');
+  if (_dayChk) _dayChk.checked = _showDay;
+  setDayTabVisible(_showDay);
 
-  if (p.restKcal) set('st-restKcal', p.restKcal);
-
-  const idx = p.actLevelIdx != null ? p.actLevelIdx : 1;
-  set('st-actLevel', idx);
-  _renderStLevelCard(idx);
-
-  onStActModeChange();
-  onSettingsChange();
+  renderProfileCard();
+  stUpdateCalc();
 }
 
 function saveSettingsProfile() {
-  const age    = parseInt(document.getElementById('st-age')?.value)    || null;
-  const weight = parseInt(document.getElementById('st-weight')?.value) || null;
-  const height = parseInt(document.getElementById('st-height')?.value) || null;
-
-  const isManual   = document.getElementById('st-act-manual')?.checked;
-  const actMode    = isManual ? 'manual' : 'level';
-  const actLevelIdx = parseInt(document.getElementById('st-actLevel')?.value) || 0;
-  const restKcal   = parseInt(document.getElementById('st-restKcal')?.value) || 0;
-
-  let actCoef = 1.2;
-  if (age && weight && height) {
-    const bmr = calcBMR(_stGender, weight, height, age);
-    if (actMode === 'level') {
-      const lv = actLevels[actLevelIdx];
-      actCoef = (Math.round(bmr * 1.2) + lv.act) / bmr;
-    } else {
-      actCoef = restKcal > 0 ? restKcal / bmr : 1.2;
-    }
-  }
-
-  const trackActivity = actMode === 'manual';
-  const profile = { gender: _stGender, age, weight, height, actCoef, actMode, actLevelIdx, restKcal, goal: _stGoal, mode: _stMode, trackActivity };
-
-  if (age && weight && height) {
+  const _saved = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
+  const weight = parseInt(document.getElementById('st-weight')?.value) || _saved.weight;
+  const profile = Object.assign({}, _saved, { weight, goal: _stGoal, mode: _stMode });
+  if (profile.age && weight && profile.height) {
     const t = calcTargets(profile);
-    profile.kcal = t.kcal; profile.prot = t.prot; profile.fat = t.fat; profile.carb = t.carb; profile.tdee = t.tdee;
+    Object.assign(profile, { kcal: t.kcal, prot: t.prot, fat: t.fat, carb: t.carb, tdee: t.tdee, restKcal: t.restKcal });
   }
-
-  const prevGoal = lsGet('profile', {}).goal;
+  const prevGoal = _saved.goal;
   lsSave('profile', profile);
+  const _sSnap = { date: new Date().toISOString(), weight: profile.weight,
+    goal: profile.goal, mode: profile.mode, goalKcal: profile.kcal, restKcal: profile.restKcal };
+  const _sPh = lsGet('profileHistory', []);
+  _sPh.unshift(_sSnap);
+  lsSave('profileHistory', _sPh);
   loadGoals();
   updateTotals();
   updateDayScoreLabels();
   renderProfileCard();
   requestAnimationFrame(() => { renderHistory(); });
   toast('Профиль сохранён ✅');
-
   const firstTime  = !localStorage.getItem('helpShownAfterProfile');
   const goalChanged = prevGoal && prevGoal !== profile.goal;
   if (firstTime || goalChanged) {
     localStorage.setItem('helpShownAfterProfile', profile.goal);
     setTimeout(() => openHelp(), 500);
   }
+}
+
+function stUpdateCalc() {
+  const calcEl = document.getElementById('st-calc-row');
+  if (!calcEl) return;
+  const weight = parseInt(document.getElementById('st-weight')?.value) || 0;
+  const p = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
+  const age = p.age || 0, height = p.height || 0;
+  const gender = _stGender || p.gender || 'male';
+  if (!weight || !age || !height) { calcEl.textContent = ''; return; }
+  const bmr = Math.round(calcBMR(gender, weight, height, age));
+  const restKcal = p.restKcal || Math.round(bmr * 1.1);
+  const actCoef = restKcal / bmr;
+  const t = calcTargets({ gender, age, weight, height, actCoef, goal: _stGoal, mode: _stMode });
+  const defPerDay = restKcal - t.kcal;
+  const kgMon = Math.abs(Math.round(defPerDay * 30 / 7700 * 10) / 10);
+  const kgSign = defPerDay >= 0 ? '−' : '+';
+  calcEl.textContent = 'BMR ' + bmr + ' · покой ' + restKcal + ' · цель ' + t.kcal + ' ккал · ' + kgSign + kgMon + ' кг/мес';
+}
+
+function stToggleMyProducts() {
+  const exp = document.getElementById('st-prods-expand');
+  if (!exp) return;
+  const open = exp.style.display !== 'none';
+  exp.style.display = open ? 'none' : '';
+  if (!open) renderUserFoodsList();
+}
+
+function stToggleGoalHistory() {
+  const exp = document.getElementById('st-goal-history-expand');
+  if (!exp) return;
+  const open = exp.style.display !== 'none';
+  exp.style.display = open ? 'none' : '';
+  if (!open) stRenderGoalHistory();
+}
+
+function stRenderGoalHistory() {
+  const el = document.getElementById('st-goal-history-list');
+  if (!el) return;
+  const ph = lsGet('profileHistory', []);
+  if (!ph.length) {
+    el.innerHTML = '<div style="font-size:12px;color:#2a2a4a;padding:4px 0">Изменения будут сохраняться здесь</div>';
+    return;
+  }
+  const gL = { loss: 'Похудеть', maintain: 'Держать', gain: 'Набрать' };
+  const mL = { mild: 'Мягко', moderate: 'Умеренно', intense: 'Интенсивно' };
+  el.innerHTML = ph.map(s => {
+    const d = new Date(s.date);
+    const ds = d.getDate() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getFullYear()).slice(2);
+    return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid rgba(255,255,255,0.04)">'
+      + '<span style="font-size:12px;color:#333">' + ds + '</span>'
+      + '<span style="font-size:12px;color:#555">' + (s.weight || '?') + ' кг · '
+      + (gL[s.goal] || s.goal || '') + (s.mode ? ' · ' + (mL[s.mode] || s.mode) : '')
+      + ' · ' + (s.goalKcal || '?') + ' ккал</span>'
+      + '</div>';
+  }).join('');
+}
+
+function stToggleApiKey() {
+  const exp = document.getElementById('st-apikey-expand');
+  if (!exp) return;
+  exp.style.display = exp.style.display === 'none' ? '' : 'none';
+}
+
+function stToggleDataMgmt() {
+  const exp = document.getElementById('st-datamgmt-expand');
+  if (!exp) return;
+  exp.style.display = exp.style.display === 'none' ? '' : 'none';
 }
 
 function saveProfileFromSheet() {
