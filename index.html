@@ -544,30 +544,30 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
   <section class="sec" id="sec-history">
     <div class="card">
       <div class="card-ttl">ДИНАМИКА БАЛЛОВ И ТЕМП ПОХУДЕНИЯ</div>
-      <div id="chartHeader" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      <div id="chartHeader" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
         <div style="text-align:center">
-          <div style="font-size:10px;color:#444;margin-bottom:2px">Ср. баллы</div>
-          <div id="ch-scores" style="font-size:13px;color:#a78bfa">—</div>
+          <div style="font-size:9px;color:#444;margin-bottom:1px">Ср. баллы</div>
+          <div id="ch-scores" style="font-size:11px;color:#a78bfa">—</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:10px;color:#444;margin-bottom:2px">Ср. темп</div>
-          <div id="ch-pace" style="font-size:13px;color:#1D9E75">—</div>
+          <div style="font-size:9px;color:#444;margin-bottom:1px">Ср. темп</div>
+          <div id="ch-pace" style="font-size:11px;color:#1D9E75">—</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:10px;color:#444;margin-bottom:2px">Похудел</div>
-          <div id="ch-lost" style="font-size:13px;color:#1D9E75">—</div>
+          <div style="font-size:9px;color:#444;margin-bottom:1px">Похудел</div>
+          <div id="ch-lost" style="font-size:11px;color:#1D9E75">—</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:10px;color:#444;margin-bottom:2px">Ср. съедено</div>
-          <div id="ch-eaten" style="font-size:13px;color:#888">—</div>
+          <div style="font-size:9px;color:#444;margin-bottom:1px">Ср. съедено</div>
+          <div id="ch-eaten" style="font-size:11px;color:#888">—</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:10px;color:#444;margin-bottom:2px">Ср. активность</div>
-          <div id="ch-act" style="font-size:13px;color:#888">—</div>
+          <div style="font-size:9px;color:#444;margin-bottom:1px">Ср. активность</div>
+          <div id="ch-act" style="font-size:11px;color:#888">—</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:10px;color:#444;margin-bottom:2px">Ср. дефицит</div>
-          <div id="ch-def" style="font-size:13px;color:#888">—</div>
+          <div style="font-size:9px;color:#444;margin-bottom:1px">Ср. дефицит</div>
+          <div id="ch-def" style="font-size:11px;color:#888">—</div>
         </div>
       </div>
       <div id="chartWrapper" style="overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x">
@@ -962,7 +962,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.65';
+const VERSION = '1.4.66';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2546,7 +2546,7 @@ function renderChart() {
           grid: { display: true,
             color: ctx => ctx.tick.value === 0 ? 'rgba(255,255,255,0.3)' : 'transparent',
             lineWidth: ctx => ctx.tick.value === 0 ? 1 : 0 } },
-        x: { ticks: { font: { size: 13 }, color: '#444', maxRotation: 0 },
+        x: { ticks: { font: { size: 15 }, color: '#444', maxRotation: 0 },
           grid: { display: false }, border: { display: false } }
       }
     }
