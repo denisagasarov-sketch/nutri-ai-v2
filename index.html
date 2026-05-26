@@ -959,13 +959,13 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.54';
+const VERSION = '1.4.55';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
   gender:'male', age:null, weight:null, height:null,
   actCoef:1.375, actMode:'manual', goal:'loss', mode:'moderate', trackActivity:true,
-  kcal:1800, prot:150, fat:60, carb:165, tdee:null
+  kcal:1800, prot:150, fat:60, carb:165, tdee:null, restKcal:null
 };
 
 function loadProfile() {
@@ -996,8 +996,8 @@ function calcTargets(profile) {
   const bmr  = calcBMR(profile.gender, profile.weight, profile.height, profile.age);
   const tdee = Math.round(bmr * profile.actCoef);
   const delta = {
-    loss:    { mild:-300, moderate:-500, intense:-700 },
-    gain:    { mild:+200, moderate:+400, intense:+600 },
+    loss:    { mild:-150, moderate:-300, intense:-500 },
+    gain:    { mild:+100, moderate:+250, intense:+400 },
     maintain:{ mild:0,    moderate:0,    intense:0    }
   };
   const d    = (delta[profile.goal] || {})[profile.mode] ?? 0;
@@ -1006,7 +1006,15 @@ function calcTargets(profile) {
   const prot = Math.round((protCoef[profile.goal] || 1.8) * profile.weight);
   const fat  = Math.round(kcal * 0.25 / 9);
   const carb = Math.max(0, Math.round((kcal - prot * 4 - fat * 9) / 4));
-  return { kcal, prot, fat, carb, tdee };
+  const restKcal = Math.round(bmr * 1.1);
+  return { kcal, prot, fat, carb, tdee, restKcal };
+}
+
+function calcDeficit(h, profile) {
+  const bmr = profile.weight
+    ? calcBMR(profile.gender, profile.weight, profile.height, profile.age) : 1636;
+  const restKcal = profile.restKcal || Math.round(bmr * 1.1);
+  return (restKcal + (h.actKcal || 0)) - (h.kcal || 0);
 }
 
 const SYS_PROMPT = `Ты помощник по подсчёту КБЖУ. Отвечай ТОЛЬКО валидным JSON без markdown.
@@ -1897,20 +1905,8 @@ function updateTodayScreen() {
   const sc = calcScores({ kcal: totKcal, prot: totProt, fat: totFat,
     carb: totCarb, actKcal: actKcal || 0, foods: foods });
 
-  const profile = lsGet('profile', {});
-  const bmr = profile.weight
-    ? calcBMR(profile.gender, profile.weight, profile.height, profile.age)
-    : (G.kcal || 1800);
-  let effKcal, deficit;
-  if ((profile.actMode || 'manual') === 'level') {
-    const tdee = Math.round(bmr * (profile.actCoef || 1.375));
-    effKcal = totKcal;
-    deficit = tdee - totKcal;
-  } else {
-    effKcal = totKcal - (actKcal || 0);
-    deficit = bmr - effKcal;
-  }
-  const kgMon = Math.round(-deficit * 30 / 7700 * 10) / 10;
+  const profile = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
+  const kgMon = Math.round(calcDeficit({ kcal: totKcal, actKcal: actKcal || 0 }, profile) * 30 / 7700 * 10) / 10;
   const streak = calcStreak(history);
 
   // Блок 1: статус дня
@@ -1946,7 +1942,7 @@ function updateTodayScreen() {
 
   const tempoEl = document.getElementById('todayTempo');
   if (tempoEl) {
-    tempoEl.textContent = (kgMon <= 0 ? '↓ ' : '↑ ') +
+    tempoEl.textContent = (kgMon >= 0 ? '↓ ' : '↑ ') +
       fmtRu(Math.abs(kgMon), 1) + ' кг/мес';
     tempoEl.style.color = statusColor;
   }
@@ -2171,9 +2167,7 @@ function calcScores(day) {
   const actBonus = trackAct ? activityBonus(actKcalDay) : 0;
 
   // 6. ТЕМП
-  const effKcal    = kcalEaten - actKcalDay;
-  const deficit    = G.kcal - effKcal;
-  const kgPerMonth = Math.round((-deficit) * 30 / 7700 * 10) / 10;
+  const kgPerMonth = Math.round(calcDeficit(day, profile) * 30 / 7700 * 10) / 10;
 
   const nutritionScore = kcalPts + protPts + balancePts + cleanPts;
   const dayScore       = nutritionScore + actBonus;
@@ -2314,10 +2308,10 @@ function renderDayView() {
   const paceEl = document.getElementById('ds-pace');
   if (!hasData) {
     paceEl.innerHTML = '<span style="color:var(--muted)">Добавьте продукты для расчёта</span>';
-  } else if (pace < 0) {
-    paceEl.innerHTML = `<span style="color:var(--clean)">Похудение: ${fmtRu(Math.abs(pace))} кг/мес</span>`;
   } else if (pace > 0) {
-    paceEl.innerHTML = `<span style="color:var(--kcal)">Набор: +${fmtRu(pace)} кг/мес ⚠️</span>`;
+    paceEl.innerHTML = `<span style="color:var(--clean)">Похудение: ${fmtRu(pace)} кг/мес</span>`;
+  } else if (pace < 0) {
+    paceEl.innerHTML = `<span style="color:var(--kcal)">Набор: +${fmtRu(Math.abs(pace))} кг/мес ⚠️</span>`;
   } else {
     paceEl.innerHTML = `<span style="color:var(--muted)">Баланс</span>`;
   }
@@ -2409,9 +2403,8 @@ function calcTotalStats(hist, profile) {
 
 
 function calcKgPerMonth(h) {
-  const effKcal = (h.kcal || 0) - (h.actKcal || 0);
-  const deficit = G.kcal - effKcal;
-  return Math.round((-deficit) * 30 / 7700 * 10) / 10;
+  const profile = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
+  return Math.round(calcDeficit(h, profile) * 30 / 7700 * 10) / 10;
 }
 
 function getChartHeight() {
@@ -2492,8 +2485,8 @@ function renderChart() {
   const темп    = history.map(h => calcKgPerMonth(h));
 
   function bc(v) {
-    if (goal === 'gain') return v >= 0 ? '#1D9E75' : '#E24B4A';
-    return v <= 0 ? '#1D9E75' : '#E24B4A';
+    if (goal === 'gain') return v <= 0 ? '#1D9E75' : '#E24B4A';
+    return v >= 0 ? '#1D9E75' : '#E24B4A';
   }
 
   // Левая ось
@@ -2948,9 +2941,8 @@ function renderTimelineDay(h, idx, bmr, isLast) {
   const MONTHS = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
   const d = new Date(h.date);
   const dateLabel = d.getDate() + ' ' + MONTHS[d.getMonth()];
-  const effKcal = (h.kcal || 0) - (h.actKcal || 0);
-  const ref     = bmr > 0 ? bmr : 1800;
-  const deficit = Math.round(ref - effKcal);
+  const _tlProfile = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
+  const deficit   = calcDeficit(h, _tlProfile);
   const isDeficit = deficit > 0;
   const dotColor  = isDeficit ? '#1D9E75' : '#E24B4A';
   const defColor  = isDeficit ? '#1D9E75' : '#E24B4A';
@@ -3034,12 +3026,8 @@ function deleteTlFood(idx, foodIdx) {
 
 function updateTlDayHeader(idx) {
   const h = history[idx];
-  const profile = lsGet('profile', {});
-  const bmr = profile.weight
-    ? Math.round(calcBMR(profile.gender, profile.weight, profile.height, profile.age)) : 0;
-  const ref = bmr > 0 ? bmr : 1800;
-  const effKcal = (h.kcal || 0) - (h.actKcal || 0);
-  const deficit = Math.round(ref - effKcal);
+  const profile = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
+  const deficit = calcDeficit(h, profile);
   const isDeficit = deficit > 0;
   const defColor = isDeficit ? '#1D9E75' : '#E24B4A';
   const defSign  = isDeficit ? '−' : '+';
