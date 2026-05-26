@@ -294,7 +294,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 .hw-date{font-size:12px;color:var(--muted);min-width:42px;flex-shrink:0;padding-top:1px}
 .hw-day-label{font-size:13px;color:var(--text);min-width:76px;flex-shrink:0}
 .hw-day-kcal{font-size:13px;color:var(--text);flex:1}
-.hw-day-def{font-size:12px;font-weight:600;min-width:56px;text-align:right;flex-shrink:0}
+.hw-day-def{font-size:12px;min-width:56px;text-align:right;flex-shrink:0}
 .hw-day-score{font-size:12px;min-width:32px;text-align:right;flex-shrink:0}
 .hw-edit-btn{background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;opacity:.65;flex-shrink:0;line-height:1}
 .hw-day-detail{padding:0 14px 10px}
@@ -307,14 +307,14 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 .hw-empty{text-align:center;color:var(--muted);padding:28px 16px;font-size:14px}
 .hw-calc{background:rgba(255,255,255,0.03);border-radius:8px;padding:6px 12px;margin-bottom:0}
 .hw-calc-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px}
-.hw-result{font-weight:600;font-size:13px}
+.hw-result{font-size:13px}
 .hw-tempo-row{font-size:12px;padding-bottom:2px}
 .hw-divider{border-top:1px solid rgba(255,255,255,0.08);margin:3px 0}
 .hw-summary{background:rgba(255,255,255,0.02);border-top:1px solid var(--border);padding:12px 14px}
 .hw-summary-title{font-size:10px;font-weight:700;letter-spacing:.7px;color:var(--muted);margin-bottom:10px}
 .hw-summary-top{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
 .hw-sum-item{text-align:center}
-.hw-sum-val{font-size:16px;font-weight:700;line-height:1.2}
+.hw-sum-val{font-size:16px;line-height:1.2}
 .hw-sum-label{font-size:10px;color:var(--muted);margin-top:2px}
 .hw-avg-kbju{background:rgba(255,255,255,0.03);border-radius:8px;padding:8px 12px}
 /* ── История: таймлайн ── */
@@ -544,30 +544,30 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
   <section class="sec" id="sec-history">
     <div class="card">
       <div class="card-ttl">ДИНАМИКА БАЛЛОВ И ТЕМП ПОХУДЕНИЯ</div>
-      <div id="chartHeader" style="display:flex;width:100%;margin-bottom:8px">
-        <div style="flex:1;text-align:center">
-          <div style="font-size:9px;color:#444;margin-bottom:2px">Ср. баллы</div>
-          <div id="ch-scores" style="font-size:12px;font-weight:600;color:#a78bfa">—</div>
+      <div id="chartHeader" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <div style="text-align:center">
+          <div style="font-size:10px;color:#444;margin-bottom:2px">Ср. баллы</div>
+          <div id="ch-scores" style="font-size:13px;color:#a78bfa">—</div>
         </div>
-        <div style="flex:1;text-align:center">
-          <div style="font-size:9px;color:#444;margin-bottom:2px">Ср. темп</div>
-          <div id="ch-pace" style="font-size:12px;font-weight:600;color:#1D9E75">—</div>
+        <div style="text-align:center">
+          <div style="font-size:10px;color:#444;margin-bottom:2px">Ср. темп</div>
+          <div id="ch-pace" style="font-size:13px;color:#1D9E75">—</div>
         </div>
-        <div style="flex:1;text-align:center">
-          <div style="font-size:9px;color:#444;margin-bottom:2px">Похудел</div>
-          <div id="ch-lost" style="font-size:12px;font-weight:600;color:#1D9E75">—</div>
+        <div style="text-align:center">
+          <div style="font-size:10px;color:#444;margin-bottom:2px">Похудел</div>
+          <div id="ch-lost" style="font-size:13px;color:#1D9E75">—</div>
         </div>
-        <div style="flex:1;text-align:center">
-          <div style="font-size:9px;color:#444;margin-bottom:2px">Ср. съедено</div>
-          <div id="ch-eaten" style="font-size:12px;font-weight:600;color:#888">—</div>
+        <div style="text-align:center">
+          <div style="font-size:10px;color:#444;margin-bottom:2px">Ср. съедено</div>
+          <div id="ch-eaten" style="font-size:13px;color:#888">—</div>
         </div>
-        <div style="flex:1;text-align:center">
-          <div style="font-size:9px;color:#444;margin-bottom:2px">Ср. актив.</div>
-          <div id="ch-act" style="font-size:12px;font-weight:600;color:#888">—</div>
+        <div style="text-align:center">
+          <div style="font-size:10px;color:#444;margin-bottom:2px">Ср. активность</div>
+          <div id="ch-act" style="font-size:13px;color:#888">—</div>
         </div>
-        <div style="flex:1;text-align:center">
-          <div style="font-size:9px;color:#444;margin-bottom:2px">Ср. дефицит</div>
-          <div id="ch-def" style="font-size:12px;font-weight:600;color:#888">—</div>
+        <div style="text-align:center">
+          <div style="font-size:10px;color:#444;margin-bottom:2px">Ср. дефицит</div>
+          <div id="ch-def" style="font-size:13px;color:#888">—</div>
         </div>
       </div>
       <div id="chartWrapper" style="overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x">
@@ -578,6 +578,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
         <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid #1a1a2e;font-size:12px"><span style="color:#555">Съедено</span><span id="ctb-kcal"></span></div>
         <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid #1a1a2e;font-size:12px"><span style="color:#555">Сожжено</span><span id="ctb-act"></span></div>
         <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid #1a1a2e;font-size:12px"><span style="color:#555">Дефицит</span><span id="ctb-def"></span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid #1a1a2e;font-size:12px"><span style="color:#555">Темп дня</span><span id="ctb-pace"></span></div>
         <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px"><span style="color:#555">Баллы</span><span id="ctb-score" style="color:#a78bfa"></span></div>
       </div>
       <div id="chartTipHint" style="font-size:11px;color:#2a2a4a;text-align:center;margin-top:8px">нажми на день</div>
@@ -961,7 +962,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.63';
+const VERSION = '1.4.64';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2545,7 +2546,7 @@ function renderChart() {
           grid: { display: true,
             color: ctx => ctx.tick.value === 0 ? 'rgba(255,255,255,0.3)' : 'transparent',
             lineWidth: ctx => ctx.tick.value === 0 ? 1 : 0 } },
-        x: { ticks: { font: { size: 10 }, color: '#444', maxRotation: 0 },
+        x: { ticks: { font: { size: 11 }, color: '#444', maxRotation: 0 },
           grid: { display: false }, border: { display: false } }
       }
     }
@@ -2570,6 +2571,13 @@ function renderChart() {
     const defEl = gel('ctb-def');
     defEl.textContent = (def >= 0 ? '−' : '+') + Math.abs(Math.round(def)) + ' ккал';
     defEl.style.color = def >= 0 ? '#1D9E75' : '#E24B4A';
+    const paceEl = gel('ctb-pace');
+    if (paceEl) {
+      const paceKg = def * 30 / 7700;
+      const paceAbs = Math.abs(paceKg).toFixed(1).replace('.', ',');
+      paceEl.textContent = (def >= 0 ? '↓ ' : '↑ ') + paceAbs + ' кг/мес';
+      paceEl.style.color = def >= 0 ? '#1D9E75' : '#E24B4A';
+    }
     gel('ctb-score').textContent = (h.total || 0) + ' пт';
     tipBox.style.display = 'block';
     if (tipHint) tipHint.style.display = 'none';
@@ -3436,7 +3444,7 @@ function renderHistoryDayRow(h, idx, bmr, targets) {
     <div style="flex:1">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:13px;color:#ccc;font-weight:500">${fmtNum(h.kcal||0)} ккал</span>
-        <span style="font-size:13px;font-weight:700;color:${kgColor}">${kgDay>=0?'↓':'↑'}${fmtRu(Math.abs(kgDay))} кг/мес</span>
+        <span style="font-size:13px;color:${kgColor}">${kgDay>=0?'↓':'↑'}${fmtRu(Math.abs(kgDay))} кг/мес</span>
       </div>
       <div style="font-size:11px;margin-top:3px">
         <span style="color:${kgColor}">${defLabel} ${defSign}${defAbs} ккал</span>
