@@ -584,42 +584,14 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
       </div>
     </div>
 
-    <!-- КАРТОЧКА 2: ЦЕЛЬ -->
-    <div class="card">
-      <div class="card-ttl">ЦЕЛЬ</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">
-        <div>
-          <div style="font-size:14px;color:#ccc">Вес</div>
-          <div style="font-size:11px;color:#2a2a4a;margin-top:2px">обновляй раз в месяц</div>
-        </div>
-        <input type="number" id="st-weight" class="st-input" min="30" max="250" placeholder="кг" oninput="stUpdateCalc()" style="width:72px;text-align:right;padding:6px 8px">
-      </div>
-      <div style="padding:10px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
-          <button id="st-goal-loss"     class="st-goal-btn" onclick="setStGoal('loss')">Похудеть</button>
-          <button id="st-goal-maintain" class="st-goal-btn" onclick="setStGoal('maintain')">Держать</button>
-          <button id="st-goal-gain"     class="st-goal-btn" onclick="setStGoal('gain')">Набрать</button>
-        </div>
-        <div id="st-mode-block">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-            <button id="st-mode-mild"     class="st-goal-btn" onclick="setStMode('mild')">Мягко</button>
-            <button id="st-mode-moderate" class="st-goal-btn" onclick="setStMode('moderate')">Умеренно</button>
-            <button id="st-mode-intense"  class="st-goal-btn" onclick="setStMode('intense')">Интенсивно</button>
-          </div>
-        </div>
-      </div>
-      <div id="st-calc-row" style="font-size:11px;color:#444;padding:8px 0;min-height:20px"></div>
-      <button onclick="saveSettingsProfile()" style="width:100%;background:rgba(167,139,250,0.1);border:0.5px solid rgba(167,139,250,0.2);color:#a78bfa;border-radius:12px;padding:13px;font-size:15px;font-weight:600;cursor:pointer">Сохранить</button>
-    </div>
-
     <!-- КАРТОЧКА 3: РЕДКО -->
     <div class="card">
       <div class="card-ttl">РЕДКО</div>
 
       <div onclick="openProfileEdit()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">
         <div>
-          <div style="font-size:14px;color:#ccc">Профиль</div>
-          <div id="st-profile-sub" style="font-size:11px;color:#555;margin-top:2px">возраст · рост · пол · БЖУ</div>
+          <div style="font-size:14px;color:#ccc">Профиль и цель</div>
+          <div id="st-profile-sub" style="font-size:11px;color:#555;margin-top:2px">возраст · вес · цель · темп</div>
         </div>
         <span style="color:#555;font-size:18px">›</span>
       </div>
@@ -690,62 +662,92 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
     <span style="font-size:16px;font-weight:700">Редактировать профиль</span>
     <button onclick="closeProfileEdit()" style="background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;padding:0;line-height:1">✕</button>
   </div>
+
+  <!-- Пол -->
   <div class="pf-row">
     <div class="pf-lbl">Пол</div>
     <div class="gender-tabs">
-      <button class="gender-tab active" id="pfGenderMale"   onclick="setGender('male','pf')">♂ Мужчина</button>
-      <button class="gender-tab"        id="pfGenderFemale" onclick="setGender('female','pf')">♀ Женщина</button>
+      <button class="gender-tab active" id="pfGenderMale"   onclick="setGender('male','pf');pfRecalc()">♂ Мужчина</button>
+      <button class="gender-tab"        id="pfGenderFemale" onclick="setGender('female','pf');pfRecalc()">♀ Женщина</button>
     </div>
   </div>
+
+  <!-- Возраст + Вес -->
   <div class="pf-2col">
-    <div><label class="pf-sublbl">Возраст</label><input type="number" id="pf-age" min="10" max="100" placeholder="лет" oninput="onProfileChange('pf')"></div>
-    <div><label class="pf-sublbl">Вес (кг)</label><input type="number" id="pf-weight" min="30" max="250" placeholder="кг" oninput="onProfileChange('pf')"></div>
-  </div>
-  <div class="pf-row">
-    <label class="pf-sublbl">Рост (см)</label>
-    <input type="number" id="pf-height" min="100" max="250" placeholder="см" oninput="onProfileChange('pf')">
-  </div>
-  <div class="pf-row">
-    <div class="pf-lbl">Активность</div>
-    <select class="pf-select" id="pf-act-mode" onchange="onActModeChange('pf')">
-      <option value="manual">Ввожу сам (Garmin)</option>
-      <option value="level">Уровень активности</option>
-    </select>
-  </div>
-  <div class="pf-row" id="pf-act-level-row" style="display:none">
-    <div class="pf-lbl">Уровень</div>
-    <select class="pf-select" id="pf-act" onchange="onProfileChange('pf')">
-      <option value="1.2">Минимальный (&lt;3 000 шагов/день)</option>
-      <option value="1.375" selected>Низкий (3 000–7 000 шагов/день)</option>
-      <option value="1.55">Средний (7 000–12 000 шагов/день)</option>
-      <option value="1.725">Высокий (12 000+ шагов/день)</option>
-    </select>
-  </div>
-  <div class="pf-row">
-    <label class="pf-sublbl">Цель</label>
-    <select class="pf-select" id="pf-goal" onchange="onGoalChange('pf')">
-      <option value="loss">Похудение</option>
-      <option value="maintain">Поддержание</option>
-      <option value="gain">Набор мышц</option>
-    </select>
-  </div>
-  <div class="pf-row" id="pf-mode-row">
-    <label class="pf-sublbl">Режим</label>
-    <select class="pf-select" id="pf-mode" onchange="onProfileChange('pf')">
-      <option value="mild">Мягкий</option>
-      <option value="moderate" selected>Умеренный</option>
-      <option value="intense">Интенсивный</option>
-    </select>
-  </div>
-  <div class="tdee-info" id="pf-tdee-info"></div>
-  <div class="targets-grid">
-    <div class="tg-box"><span class="tg-lbl" style="color:var(--kcal)">Ккал</span><input type="number" class="tg-input" id="pf-kcal" min="1000" max="5000"></div>
-    <div class="tg-box"><span class="tg-lbl" style="color:var(--prot)">Белок</span><input type="number" class="tg-input" id="pf-prot" min="50" max="400"></div>
-    <div class="tg-box"><span class="tg-lbl">Жиры</span><input type="number" class="tg-input" id="pf-fat" min="20" max="300"></div>
-    <div class="tg-box"><span class="tg-lbl" style="color:var(--balance)">Углев</span><input type="number" class="tg-input" id="pf-carb" min="0" max="600"></div>
+    <div><label class="pf-sublbl">Возраст</label><input type="number" id="pf-age" min="10" max="100" placeholder="лет" oninput="pfRecalc()"></div>
+    <div><label class="pf-sublbl">Вес (кг)</label><input type="number" id="pf-weight" min="30" max="250" placeholder="кг" oninput="pfRecalc()"></div>
   </div>
 
-  <label class="recalc-check"><input type="checkbox" id="recalcHistory" checked> Пересчитать историю с новыми данными</label>
+  <!-- Рост -->
+  <div class="pf-row">
+    <label class="pf-sublbl">Рост (см)</label>
+    <input type="number" id="pf-height" min="100" max="250" placeholder="см" oninput="pfRecalc()">
+  </div>
+
+  <div style="height:0.5px;background:#0f0f1a;margin:8px 0"></div>
+
+  <!-- Направление -->
+  <div style="display:flex;gap:4px;margin-bottom:10px">
+    <button id="pf-dir-loss"     style="flex:1;padding:8px;border-radius:8px;font-size:12px;text-align:center;border:none;cursor:pointer;background:rgba(255,255,255,0.03);color:#333" onclick="pfSetDir('loss')">Худею</button>
+    <button id="pf-dir-maintain" style="flex:1;padding:8px;border-radius:8px;font-size:12px;text-align:center;border:none;cursor:pointer;background:rgba(255,255,255,0.03);color:#333" onclick="pfSetDir('maintain')">Держу</button>
+    <button id="pf-dir-gain"     style="flex:1;padding:8px;border-radius:8px;font-size:12px;text-align:center;border:none;cursor:pointer;background:rgba(255,255,255,0.03);color:#333" onclick="pfSetDir('gain')">Набираю</button>
+  </div>
+
+  <div style="height:0.5px;background:#0f0f1a;margin:8px 0"></div>
+
+  <!-- Темп -->
+  <div id="pf-pace-block" style="padding:8px 0 2px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="font-size:13px;color:#888">Темп похудения</div>
+        <div style="font-size:10px;color:#2a2a4a;margin-top:1px">без физической активности</div>
+      </div>
+      <span id="pf-pace-val" style="font-size:17px;font-weight:600;color:#1D9E75"></span>
+    </div>
+    <input type="range" id="pf-pace-slider" min="-30" max="0" step="1" value="-15" style="width:100%;cursor:pointer;accent-color:#1D9E75" oninput="pfRecalc()">
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:#2a2a4a;margin-top:2px">
+      <span>−3,0</span><span>−1,5</span><span>0</span>
+    </div>
+  </div>
+
+  <div style="height:0.5px;background:#0f0f1a;margin:8px 0"></div>
+
+  <!-- Белок -->
+  <div style="padding:8px 0 2px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <span style="font-size:13px;color:#888">Белок</span>
+      <span id="pf-prot-val" style="font-size:17px;font-weight:600;color:#fda085"></span>
+    </div>
+    <input type="range" id="pf-prot-slider" min="12" max="30" step="1" value="20" style="width:100%;accent-color:#fda085" oninput="pfRecalc()">
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:#2a2a4a;margin-top:2px">
+      <span>1,2 г/кг</span><span>2,0</span><span>3,0</span>
+    </div>
+  </div>
+
+  <!-- Жиры -->
+  <div style="padding:8px 0 2px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <span style="font-size:13px;color:#888">Жиры</span>
+      <span id="pf-fat-val" style="font-size:17px;font-weight:600;color:#ffecd2"></span>
+    </div>
+    <input type="range" id="pf-fat-slider" min="15" max="45" step="1" value="25" style="width:100%;accent-color:#ffecd2" oninput="pfRecalc()">
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:#2a2a4a;margin-top:2px">
+      <span>15%</span><span>25%</span><span>45%</span>
+    </div>
+  </div>
+
+  <div style="height:0.5px;background:#0f0f1a;margin:8px 0"></div>
+
+  <!-- Итого -->
+  <div style="background:#0f0f1a;border-radius:10px;padding:10px 12px;margin-top:6px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <span style="font-size:11px;color:#555">Итого</span>
+      <span id="pf-total-kcal" style="font-size:20px;font-weight:700;color:#fff"></span>
+    </div>
+    <div id="pf-macro-line" style="font-size:10px;color:#444;margin-top:4px"></div>
+  </div>
+
+  <label class="recalc-check" style="margin-top:14px"><input type="checkbox" id="recalcHistory" checked> Пересчитать историю с новыми данными</label>
   <button class="btn btn-full" style="margin-top:4px" onclick="saveProfileFromSheet()">Сохранить</button>
   <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="closeProfileEdit()">Отмена</button>
 </div>
@@ -937,7 +939,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.58';
+const VERSION = '1.4.59';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -972,7 +974,7 @@ function calcBMR(gender, weight, height, age) {
 
 function calcTargets(profile) {
   const bmr  = calcBMR(profile.gender, profile.weight, profile.height, profile.age);
-  const tdee = Math.round(bmr * profile.actCoef);
+  const tdee = Math.round(bmr * 1.1);
   const delta = {
     loss:    { mild:-150, moderate:-300, intense:-500 },
     gain:    { mild:+100, moderate:+250, intense:+400 },
@@ -1170,42 +1172,39 @@ function toggleActivityHelp(e, popupId) {
 
 // ── populate settings profile form from saved profile ──
 function populateProfileForm(prefix) {
+  if (prefix !== 'pf') return;
   const p = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
-  _gender[prefix] = p.gender || 'male';
-  document.getElementById(prefix === 'pf' ? 'pfGenderMale'   : 'obGenderMale').classList.toggle('active', _gender[prefix] === 'male');
-  document.getElementById(prefix === 'pf' ? 'pfGenderFemale' : 'obGenderFemale').classList.toggle('active', _gender[prefix] === 'female');
+  _gender['pf'] = p.gender || 'male';
+  const gm = document.getElementById('pfGenderMale');
+  const gf = document.getElementById('pfGenderFemale');
+  if (gm) gm.classList.toggle('active', _gender['pf'] === 'male');
+  if (gf) gf.classList.toggle('active', _gender['pf'] === 'female');
 
   const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
-  set(prefix + '-age',    p.age);
-  set(prefix + '-weight', p.weight);
-  set(prefix + '-height', p.height);
+  set('pf-age',    p.age);
+  set('pf-weight', p.weight);
+  set('pf-height', p.height);
 
-  const actEl = document.getElementById(prefix + '-act');
-  if (actEl) actEl.value = p.actCoef || 1.375;
+  _pfDir = p.goal || 'loss';
 
-  const goalEl = document.getElementById(prefix + '-goal');
-  if (goalEl) goalEl.value = p.goal || 'loss';
-
-  const modeRow = document.getElementById(prefix + '-mode-row');
-  if (modeRow) modeRow.style.display = (p.goal === 'maintain') ? 'none' : '';
-
-  const modeEl = document.getElementById(prefix + '-mode');
-  if (modeEl) modeEl.value = p.mode || 'moderate';
-
-  set(prefix + '-kcal', p.kcal);
-  set(prefix + '-prot', p.prot);
-  set(prefix + '-fat',  p.fat);
-  set(prefix + '-carb', p.carb);
-
-  const tdeeEl = document.getElementById(prefix + '-tdee-info');
-  if (tdeeEl && p.tdee) tdeeEl.textContent = `Ваш TDEE: ~${p.tdee} ккал/день`;
-
-  if (prefix === 'pf') {
-    const actModeEl = document.getElementById('pf-act-mode');
-    if (actModeEl) actModeEl.value = p.actMode || 'manual';
-    const actLevelRow = document.getElementById('pf-act-level-row');
-    if (actLevelRow) actLevelRow.style.display = (p.actMode === 'level') ? '' : 'none';
+  const paceSlider = document.getElementById('pf-pace-slider');
+  if (paceSlider) {
+    if (_pfDir === 'gain') {
+      paceSlider.min = '0'; paceSlider.max = '20';
+      paceSlider.value = String(Math.round((p.paceKgMonth || 1.0) * 10));
+    } else {
+      paceSlider.min = '-30'; paceSlider.max = '0';
+      paceSlider.value = String(Math.round((p.paceKgMonth || -1.5) * 10));
+    }
   }
+
+  const protSlider = document.getElementById('pf-prot-slider');
+  if (protSlider) protSlider.value = String(Math.round((p.protCoef || 2.0) * 10));
+
+  const fatSlider = document.getElementById('pf-fat-slider');
+  if (fatSlider) fatSlider.value = String(Math.round((p.fatPct || 0.25) * 100));
+
+  pfSetDir(_pfDir);
 }
 
 // ── read profile form into an object ──
@@ -2703,6 +2702,7 @@ let _stGoal   = 'loss';
 let _stMode   = 'moderate';
 let _obGoal   = 'loss';
 let _obMode   = 'moderate';
+let _pfDir    = 'loss';
 
 function _stSetBtn(id, active) {
   const el = document.getElementById(id);
@@ -2781,10 +2781,17 @@ function stPopulate() {
 
   const subEl = document.getElementById('st-profile-sub');
   if (subEl) {
-    const gL = { loss: 'похудеть', maintain: 'держать', gain: 'набрать' };
-    subEl.textContent = (p.age && p.height)
-      ? p.age + ' лет · ' + p.height + ' см · ' + (p.gender === 'male' ? '♂' : '♀') + ' · ' + (gL[p.goal] || '')
-      : 'возраст · рост · пол · БЖУ';
+    const gL = { loss: 'худею', maintain: 'держу', gain: 'набираю' };
+    if (p.age && p.weight) {
+      let paceTxt = '';
+      if (p.paceKgMonth !== undefined) {
+        const pm = p.paceKgMonth;
+        paceTxt = ' · ' + (pm < 0 ? '−' : '+') + Math.abs(pm).toFixed(1).replace('.', ',') + ' кг/мес';
+      }
+      subEl.textContent = p.age + ' лет · ' + p.weight + ' кг · ' + (gL[p.goal] || '') + paceTxt;
+    } else {
+      subEl.textContent = 'возраст · вес · цель · темп';
+    }
   }
 
   const _showDay = localStorage.getItem('showDayTab') === '1';
@@ -2893,6 +2900,94 @@ function stToggleDataMgmt() {
   exp.style.display = exp.style.display === 'none' ? '' : 'none';
 }
 
+function pfSetDir(dir) {
+  _pfDir = dir;
+  ['loss','maintain','gain'].forEach(d => {
+    const btn = document.getElementById('pf-dir-' + d);
+    if (!btn) return;
+    btn.style.background = d === dir ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)';
+    btn.style.color      = d === dir ? '#ccc' : '#333';
+  });
+  const paceBlock  = document.getElementById('pf-pace-block');
+  const paceSlider = document.getElementById('pf-pace-slider');
+  const paceValEl  = document.getElementById('pf-pace-val');
+  if (dir === 'maintain') {
+    if (paceBlock) paceBlock.style.display = 'none';
+  } else if (dir === 'gain') {
+    if (paceBlock) paceBlock.style.display = '';
+    if (paceSlider) {
+      paceSlider.min = '0'; paceSlider.max = '20'; paceSlider.style.accentColor = '#a78bfa';
+      if (parseInt(paceSlider.value) < 0) paceSlider.value = '10';
+    }
+    if (paceValEl) paceValEl.style.color = '#a78bfa';
+  } else {
+    if (paceBlock) paceBlock.style.display = '';
+    if (paceSlider) {
+      paceSlider.min = '-30'; paceSlider.max = '0'; paceSlider.style.accentColor = '#1D9E75';
+      if (parseInt(paceSlider.value) > 0) paceSlider.value = '-15';
+    }
+    if (paceValEl) paceValEl.style.color = '#1D9E75';
+  }
+  pfRecalc();
+}
+
+function pfRecalc() {
+  const age    = parseInt(document.getElementById('pf-age')?.value)    || 0;
+  const weight = parseInt(document.getElementById('pf-weight')?.value) || 0;
+  const height = parseInt(document.getElementById('pf-height')?.value) || 0;
+  const gender = _gender['pf'] || 'male';
+  const paceSlider = document.getElementById('pf-pace-slider');
+  const protSlider = document.getElementById('pf-prot-slider');
+  const fatSlider  = document.getElementById('pf-fat-slider');
+  const rawPace    = paceSlider ? (parseInt(paceSlider.value) / 10) : -1.5;
+  const paceKgMonth = _pfDir === 'maintain' ? 0 : rawPace;
+  const protCoef   = protSlider ? (parseInt(protSlider.value) / 10) : 2.0;
+  const fatPct     = fatSlider  ? (parseInt(fatSlider.value)  / 100) : 0.25;
+
+  const paceValEl  = document.getElementById('pf-pace-val');
+  const protValEl  = document.getElementById('pf-prot-val');
+  const fatValEl   = document.getElementById('pf-fat-val');
+  const totalEl    = document.getElementById('pf-total-kcal');
+  const macroEl    = document.getElementById('pf-macro-line');
+
+  const protLabel = protCoef.toFixed(1).replace('.', ',') + ' г/кг';
+  const fatLabel  = Math.round(fatPct * 100) + '%';
+  if (paceValEl && _pfDir !== 'maintain') {
+    const sign = paceKgMonth > 0 ? '+' : '−';
+    paceValEl.textContent = sign + Math.abs(paceKgMonth).toFixed(1).replace('.', ',') + ' кг/мес';
+  } else if (paceValEl) {
+    paceValEl.textContent = '0 кг/мес';
+  }
+
+  if (!age || !weight || !height) {
+    if (protValEl) protValEl.textContent = protLabel;
+    if (fatValEl)  fatValEl.textContent  = fatLabel;
+    if (totalEl)   totalEl.textContent   = '—';
+    if (macroEl)   macroEl.textContent   = '';
+    return;
+  }
+
+  const bmr      = Math.round(calcBMR(gender, weight, height, age));
+  const restKcal = Math.round(bmr * 1.1);
+  const defDay   = Math.round(paceKgMonth * 7700 / 30);
+  const goalKcal = Math.max(1200, restKcal + defDay);
+  const prot     = Math.round(protCoef * weight);
+  const fat      = Math.round(goalKcal * fatPct / 9);
+  const carb     = Math.max(0, Math.round((goalKcal - prot * 4 - fat * 9) / 4));
+  const total    = Math.round(prot * 4 + fat * 9 + carb * 4);
+  const diff     = total - goalKcal;
+
+  if (protValEl) protValEl.textContent = protLabel + ' → ' + prot + 'г';
+  if (fatValEl)  fatValEl.textContent  = fatLabel  + ' → ' + fat  + 'г';
+  if (totalEl)   totalEl.textContent   = total + ' ккал';
+  if (macroEl) {
+    let txt = 'цель ' + goalKcal + ' · Б ' + prot + 'г · Ж ' + fat + 'г · У ' + carb + 'г';
+    if (diff > 10)        txt += ' <span style="color:#E24B4A">(+' + diff + ' от цели)</span>';
+    else if (diff < -10)  txt += ' <span style="color:#1D9E75">(−' + Math.abs(diff) + ' от цели)</span>';
+    macroEl.innerHTML = txt;
+  }
+}
+
 function obSetGoal(g) {
   _obGoal = g;
   _stUpdateGroup(['ob-goal-loss','ob-goal-maintain','ob-goal-gain'], 'ob-goal-' + g);
@@ -2926,11 +3021,44 @@ function obUpdateCalc() {
 }
 
 function saveProfileFromSheet() {
+  const gender = _gender['pf'] || 'male';
+  const age    = parseInt(document.getElementById('pf-age')?.value)    || null;
+  const weight = parseInt(document.getElementById('pf-weight')?.value) || null;
+  const height = parseInt(document.getElementById('pf-height')?.value) || null;
+
+  const paceSlider = document.getElementById('pf-pace-slider');
+  const rawPace    = paceSlider ? (parseInt(paceSlider.value) / 10) : -1.5;
+  const paceKgMonth = _pfDir === 'maintain' ? 0 : rawPace;
+
+  const protSlider = document.getElementById('pf-prot-slider');
+  const protCoef   = protSlider ? (parseInt(protSlider.value) / 10) : 2.0;
+
+  const fatSlider  = document.getElementById('pf-fat-slider');
+  const fatPct     = fatSlider ? (parseInt(fatSlider.value) / 100) : 0.25;
+
+  let kcal = 1800, prot = 150, fat = 60, carb = 165, restKcal = 1814;
+  if (age && weight && height) {
+    const bmr    = Math.round(calcBMR(gender, weight, height, age));
+    restKcal     = Math.round(bmr * 1.1);
+    const defDay = Math.round(paceKgMonth * 7700 / 30);
+    kcal         = Math.max(1200, restKcal + defDay);
+    prot         = Math.round(protCoef * weight);
+    fat          = Math.round(kcal * fatPct / 9);
+    carb         = Math.max(0, Math.round((kcal - prot * 4 - fat * 9) / 4));
+  }
+
+  const actCoef = (age && weight && height)
+    ? restKcal / calcBMR(gender, weight, height, age) : 1.1;
+  const profile = {
+    gender, age, weight, height, actCoef, actMode: 'manual', trackActivity: true,
+    goal: _pfDir, paceKgMonth, protCoef, fatPct, restKcal, kcal, prot, fat, carb, tdee: restKcal
+  };
+
   const prevGoal = lsGet('profile', {}).goal;
-  const profile  = readProfileForm('pf');
   lsSave('profile', profile);
   const _phSnap = { date: new Date().toISOString(), weight: profile.weight,
-    goal: profile.goal, mode: profile.mode, goalKcal: profile.kcal, restKcal: profile.restKcal };
+    goal: profile.goal, paceKgMonth: profile.paceKgMonth,
+    goalKcal: profile.kcal, restKcal: profile.restKcal };
   const _phArr = lsGet('profileHistory', []);
   _phArr.unshift(_phSnap);
   lsSave('profileHistory', _phArr);
