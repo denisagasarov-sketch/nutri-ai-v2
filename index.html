@@ -212,7 +212,7 @@ input::placeholder{color:var(--muted)}
 
 /* ── History chart ── */
 #scoreChart{display:block}
-#chartWrapper{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#chartWrapper{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x}
 #chartWrapper::-webkit-scrollbar{display:none}
 
 /* ── Day view nav & animation ── */
@@ -959,7 +959,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.52';
+const VERSION = '1.4.53';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2479,9 +2479,7 @@ function renderChart() {
     return w;
   }
   const wrapperW = getChartWrapperWidth();
-  const perDay = history.length <= 10
-    ? Math.floor(wrapperW / history.length) + 1
-    : Math.max(28, Math.floor(wrapperW / 10));
+  const perDay = Math.max(24, Math.floor(wrapperW / 10.3));
   _perDay = perDay;
   const mainW = history.length * perDay;
 
@@ -2585,13 +2583,45 @@ function renderChart() {
 
     function hide() { tip.style.display = 'none'; }
 
+    // ── Desktop ──
     mc.addEventListener('mousemove', e => show(e.clientX, e.clientY));
     mc.addEventListener('mouseleave', hide);
+
+    // ── Mobile: long-press to pin tooltip, swipe to scroll ──
+    let _tStartX = 0, _tStartY = 0, _tTimer = null, _tLong = false, _tHideTimer = null;
+
     mc.addEventListener('touchstart', e => {
-      e.preventDefault();
-      show(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: false });
-    mc.addEventListener('touchend', () => setTimeout(hide, 1500));
+      _tStartX = e.touches[0].clientX;
+      _tStartY = e.touches[0].clientY;
+      _tLong = false;
+      if (_tHideTimer) { clearTimeout(_tHideTimer); _tHideTimer = null; }
+      _tTimer = setTimeout(() => {
+        _tTimer = null;
+        _tLong = true;
+        show(_tStartX, _tStartY);
+      }, 400);
+    }, { passive: true });
+
+    mc.addEventListener('touchmove', e => {
+      if (!_tTimer && !_tLong) return;
+      const dx = Math.abs(e.touches[0].clientX - _tStartX);
+      const dy = Math.abs(e.touches[0].clientY - _tStartY);
+      if (dx > 8 || dy > 8) {
+        if (_tTimer) { clearTimeout(_tTimer); _tTimer = null; }
+        hide();
+        _tLong = false;
+      }
+    }, { passive: true });
+
+    mc.addEventListener('touchend', () => {
+      if (_tTimer) { clearTimeout(_tTimer); _tTimer = null; }
+      if (_tLong) {
+        _tHideTimer = setTimeout(hide, 3000);
+      } else {
+        hide();
+      }
+      _tLong = false;
+    }, { passive: true });
   }
 
   initChartTooltip();
