@@ -315,6 +315,25 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 .hw-sum-val{font-size:16px;font-weight:700;line-height:1.2}
 .hw-sum-label{font-size:10px;color:var(--muted);margin-top:2px}
 .hw-avg-kbju{background:rgba(255,255,255,0.03);border-radius:8px;padding:8px 12px}
+/* ── История: таймлайн ── */
+.tl-wrap{padding:4px 0 0}
+.tl-item{display:flex;gap:0;cursor:pointer;position:relative}
+.tl-item:active .tl-content{opacity:.8}
+.tl-line-col{display:flex;flex-direction:column;align-items:center;width:22px;flex-shrink:0}
+.tl-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex-shrink:0;position:relative;z-index:1}
+.tl-line{width:1px;background:#2a2a4a;flex:1;margin-top:3px;min-height:12px}
+.tl-content{flex:1;padding:0 0 14px 10px;min-width:0}
+.tl-date{font-size:11px;color:#555;margin-bottom:1px;line-height:1.6}
+.tl-main{font-size:13px;color:#ccc;font-weight:500;line-height:1.4}
+.tl-sub{font-size:11px;color:#555;margin-top:2px}
+.tl-expanded{background:#131320;border-radius:10px;padding:10px 12px;margin-top:8px}
+.tl-food-row{display:flex;align-items:baseline;gap:6px;padding:5px 0;border-bottom:0.5px solid rgba(255,255,255,0.04)}
+.tl-food-row:last-of-type{border-bottom:none}
+.tl-food-time{font-size:10px;color:#333;flex-shrink:0;min-width:34px}
+.tl-food-name{font-size:12px;color:#bbb;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-food-kcal{font-size:12px;color:#555;flex-shrink:0;margin-left:6px}
+.tl-food-sub{font-size:10px;color:#3a3a5a;padding:1px 0 4px 40px}
+.tl-totals{display:flex;align-items:center;justify-content:space-between;padding-top:8px;margin-top:4px;border-top:0.5px solid rgba(255,255,255,0.06);font-size:11px;color:#555}
 .hw-avg-title{font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--muted);margin-bottom:6px}
 .hw-avg-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
 .hw-avg-item{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
@@ -940,7 +959,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.49';
+const VERSION = '1.4.50';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2877,9 +2896,6 @@ function renderHistoryWeeks() {
   const bmr = profile.weight
     ? Math.round(calcBMR(profile.gender, profile.weight, profile.height, profile.age))
     : 0;
-  const targets = profile.weight
-    ? calcTargets(profile)
-    : { kcal: 1800, prot: 150, fat: 60, carb: 165 };
 
   if (!history || !history.length) {
     container.innerHTML = '<div class="hw-empty">Нет данных за закрытые дни</div>';
@@ -2890,18 +2906,70 @@ function renderHistoryWeeks() {
     .filter(({ h }) => h.date)
     .sort((a, b) => new Date(b.h.date) - new Date(a.h.date));
 
-  const weeks = new Map();
-  sorted.forEach(item => {
-    const key = getWeekMon(item.h.date);
-    if (!weeks.has(key)) weeks.set(key, []);
-    weeks.get(key).push(item);
+  const html = ['<div class="tl-wrap">'];
+  sorted.forEach(({ h, idx }, i) => {
+    html.push(renderTimelineDay(h, idx, bmr, i === sorted.length - 1));
   });
-
-  const html = [];
-  weeks.forEach((items, key) => {
-    html.push(renderHistoryWeek(key, items, bmr, targets));
-  });
+  html.push('</div>');
   container.innerHTML = html.join('');
+}
+
+function renderTimelineDay(h, idx, bmr, isLast) {
+  const MONTHS = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  const d = new Date(h.date);
+  const dateLabel = d.getDate() + ' ' + MONTHS[d.getMonth()];
+
+  const effKcal = (h.kcal || 0) - (h.actKcal || 0);
+  const ref = bmr > 0 ? bmr : 1800;
+  const deficit = Math.round(ref - effKcal);
+  const isDeficit = deficit > 0;
+  const dotColor  = isDeficit ? '#1D9E75' : '#E24B4A';
+  const defColor  = isDeficit ? '#1D9E75' : '#E24B4A';
+  const defLabel  = isDeficit ? 'дефицит' : 'профицит';
+  const defSign   = isDeficit ? '−' : '+';
+  const hasAct    = (h.actKcal || 0) > 0;
+
+  const dayFoods = (h.foods || []).slice().sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+  let foodsHTML = '';
+  if (dayFoods.length) {
+    foodsHTML = dayFoods.map(f => {
+      const t = formatTime(f.timestamp);
+      return '<div class="tl-food-row">'
+        + '<span class="tl-food-time">' + (t || '—') + '</span>'
+        + '<span class="tl-food-name">' + esc(f.name || '') + '</span>'
+        + '<span class="tl-food-kcal">' + Math.round(f.kcal || 0) + ' ккал</span>'
+        + '</div>'
+        + '<div class="tl-food-sub">Б' + fmtRu(f.prot,1) + ' · Ж' + fmtRu(f.fat,1) + ' · У' + fmtRu(f.carb,1) + ' г</div>';
+    }).join('');
+  } else {
+    foodsHTML = '<div style="font-size:12px;color:#444;padding:6px 0">нет данных</div>';
+  }
+
+  const detailId = 'hwday-' + idx;
+
+  const totalsRow = '<div class="tl-totals">'
+    + '<span>Б' + (h.prot||0) + ' · Ж' + (h.fat||0) + ' · У' + (h.carb||0) + ' г</span>'
+    + '<span style="display:flex;align-items:center;gap:6px">'
+    + '<button onclick="event.stopPropagation();changeHistoryDate(' + idx + ')" style="background:none;border:none;color:#444;font-size:12px;cursor:pointer;padding:0;line-height:1">📅</button>'
+    + '<input type="date" id="changeDateInput-' + idx + '" style="display:none;background:rgba(255,255,255,0.06);border:0.5px solid rgba(167,139,250,0.4);border-radius:6px;padding:2px 6px;color:#fff;font-size:11px;outline:none;color-scheme:dark" onclick="event.stopPropagation()" onchange="event.stopPropagation();applyHistoryDate(' + idx + ')">'
+    + '</span>'
+    + '</div>';
+
+  return '<div class="tl-item" onclick="hwToggleDay(\'' + detailId + '\')">'
+    + '<div class="tl-line-col">'
+    + '<div class="tl-dot" style="background:' + dotColor + '"></div>'
+    + (isLast ? '' : '<div class="tl-line"></div>')
+    + '</div>'
+    + '<div class="tl-content">'
+    + '<div class="tl-date">' + dateLabel + '</div>'
+    + '<div class="tl-main">' + (h.kcal||0) + ' ккал · <span style="color:' + defColor + '">' + defSign + Math.abs(deficit) + ' ' + defLabel + '</span></div>'
+    + '<div class="tl-sub">' + (hasAct ? 'сожжено ' + h.actKcal + ' · ' : '') + 'белок ' + (h.prot||0) + 'г</div>'
+    + '<div id="' + detailId + '" style="display:none" onclick="event.stopPropagation()">'
+    + '<div class="tl-expanded">' + foodsHTML + totalsRow + '</div>'
+    + '</div>'
+    + '</div>'
+    + '</div>';
 }
 
 function renderHistoryWeek(monKey, items, bmr, targets) {
