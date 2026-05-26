@@ -959,7 +959,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.53';
+const VERSION = '1.4.54';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -2966,8 +2966,8 @@ function renderTimelineDay(h, idx, bmr, isLast) {
     + '<div class="tl-date">' + dateLabel
     + ' <span id="tl-datehint-' + idx + '" style="font-size:11px;color:#2a2a4a"> · зажми для правки</span>'
     + '</div>'
-    + '<div class="tl-main" style="display:flex;justify-content:space-between;align-items:baseline"><span>' + (h.kcal||0) + ' ккал</span><span style="font-size:11px;font-weight:normal;color:' + defColor + '">' + defSign + Math.abs(deficit) + '</span></div>'
-    + '<div class="tl-sub">' + (hasAct ? 'сожжено ' + h.actKcal + ' · ' : '') + 'белок ' + (h.prot||0) + 'г</div>'
+    + '<div class="tl-main" id="tl-main-' + idx + '" style="display:flex;justify-content:space-between;align-items:baseline"><span>' + (h.kcal||0) + ' ккал</span><span style="font-size:11px;font-weight:normal;color:' + defColor + '">' + defSign + Math.abs(deficit) + '</span></div>'
+    + '<div class="tl-sub" id="tl-sub-' + idx + '">' + (hasAct ? 'сожжено ' + h.actKcal + ' · ' : '') + 'белок ' + (h.prot||0) + 'г</div>'
     + '<div id="' + detailId + '" style="display:none" onclick="event.stopPropagation()">'
     + '<div class="tl-expanded" id="tl-exp-' + idx + '">'
     + _renderTlFoodPanel(idx, false)
@@ -3029,6 +3029,77 @@ function deleteTlFood(idx, foodIdx) {
   lsSave('history', history);
   const panel = document.getElementById('tl-exp-' + idx);
   if (panel) panel.innerHTML = _renderTlFoodPanel(idx, true);
+  updateTlDayHeader(idx);
+}
+
+function updateTlDayHeader(idx) {
+  const h = history[idx];
+  const profile = lsGet('profile', {});
+  const bmr = profile.weight
+    ? Math.round(calcBMR(profile.gender, profile.weight, profile.height, profile.age)) : 0;
+  const ref = bmr > 0 ? bmr : 1800;
+  const effKcal = (h.kcal || 0) - (h.actKcal || 0);
+  const deficit = Math.round(ref - effKcal);
+  const isDeficit = deficit > 0;
+  const defColor = isDeficit ? '#1D9E75' : '#E24B4A';
+  const defSign  = isDeficit ? '−' : '+';
+  const hasAct   = (h.actKcal || 0) > 0;
+  const mainEl = document.getElementById('tl-main-' + idx);
+  if (mainEl) mainEl.innerHTML = '<span>' + (h.kcal||0) + ' ккал</span><span style="font-size:11px;font-weight:normal;color:' + defColor + '">' + defSign + Math.abs(deficit) + '</span>';
+  const subEl = document.getElementById('tl-sub-' + idx);
+  if (subEl) subEl.textContent = (hasAct ? 'сожжено ' + h.actKcal + ' · ' : '') + 'белок ' + (h.prot||0) + 'г';
+}
+
+async function tlAddFood(idx) {
+  const inp = document.getElementById('tl-food-input-' + idx);
+  if (!inp) return;
+  const txt = inp.value.trim();
+  if (!txt) return;
+  const sta = document.getElementById('tl-food-status-' + idx);
+  if (sta) sta.textContent = '⏳';
+
+  const doAdd = (data) => {
+    if (!data.timestamp) data.timestamp = Date.now();
+    data.kcal = Math.round(data.kcal);
+    data.prot = Math.round(data.prot * 10) / 10;
+    data.fat  = Math.round(data.fat  * 10) / 10;
+    data.carb = Math.round(data.carb * 10) / 10;
+    history[idx].foods.push(data);
+    recalcDayTotals(idx);
+    lsSave('history', history);
+    const panel = document.getElementById('tl-exp-' + idx);
+    if (panel) panel.innerHTML = _renderTlFoodPanel(idx, true);
+    updateTlDayHeader(idx);
+    const newSta = document.getElementById('tl-food-status-' + idx);
+    if (newSta) {
+      newSta.textContent = '✓ ' + data.name;
+      setTimeout(() => { const s = document.getElementById('tl-food-status-' + idx); if (s) s.textContent = ''; }, 2000);
+    }
+    const newInp = document.getElementById('tl-food-input-' + idx);
+    if (newInp) newInp.focus();
+  };
+
+  const local = lookupUserFoods(txt);
+  if (local) { doAdd(local); return; }
+
+  const key = localStorage.getItem('okey');
+  if (!key) { if (sta) sta.textContent = '❌ нет API ключа'; return; }
+  try {
+    const data = await callGPT(txt, key);
+    if (data.error) {
+      if (sta) sta.textContent = '❌ не распознано';
+    } else {
+      if (!data.weight) {
+        const wm = txt.match(/(\d+(?:[.,]\d+)?)\s*(?:г(?:р(?:амм?)?)?|мл|ml|g(?:r(?:am)?)?)(?=\s|$|[^а-яёa-z])/i);
+        data.weight = wm ? parseFloat(wm[1].replace(',', '.')) : 100;
+      }
+      data.name = data.name.replace(/\s+\d+(?:[.,]\d+)?\s*г$/i, '').trim();
+      doAdd(data);
+    }
+  } catch(e) {
+    const s = document.getElementById('tl-food-status-' + idx);
+    if (s) s.textContent = '❌ ошибка';
+  }
 }
 
 function _renderTlFoodPanel(idx, editMode) {
@@ -3080,7 +3151,17 @@ function _renderTlFoodPanel(idx, editMode) {
     html += '<div style="font-size:12px;color:#444;padding:6px 0">нет данных</div>';
   }
   if (editMode) {
-    html += '<div onclick="event.stopPropagation();openDayEditModal(' + idx + ')" style="text-align:center;padding:8px 0 2px;font-size:11px;color:#a78bfa;cursor:pointer;border-top:0.5px solid rgba(255,255,255,0.06);margin-top:4px">+ добавить продукт</div>';
+    html += '<div onclick="event.stopPropagation()" style="padding-top:8px;border-top:0.5px solid rgba(255,255,255,0.06);margin-top:4px">'
+      + '<div style="display:flex;gap:6px;margin-bottom:4px">'
+      + '<input id="tl-food-input-' + idx + '" type="text" placeholder="курица 200г" '
+      + 'style="flex:1;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:7px;padding:6px 10px;color:#fff;font-size:12px;outline:none" '
+      + 'onclick="event.stopPropagation()" '
+      + 'onkeydown="if(event.key===\'Enter\'){event.stopPropagation();tlAddFood(' + idx + ')}">'
+      + '<button onclick="event.stopPropagation();tlAddFood(' + idx + ')" '
+      + 'style="background:rgba(167,139,250,0.15);border:0.5px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:7px;padding:6px 12px;font-size:14px;cursor:pointer;flex-shrink:0">+</button>'
+      + '</div>'
+      + '<div id="tl-food-status-' + idx + '" style="font-size:10px;color:#555;min-height:14px"></div>'
+      + '</div>';
   } else {
     html += '<div class="tl-totals">'
       + '<span>Б' + (h.prot||0) + ' · Ж' + (h.fat||0) + ' · У' + (h.carb||0) + ' г</span>'
