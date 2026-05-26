@@ -767,7 +767,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
     <div class="tg-box"><span class="tg-lbl" style="color:var(--balance)">Углев</span><input type="number" class="tg-input" id="pf-carb" min="0" max="600"></div>
   </div>
 
-  <label class="recalc-check"><input type="checkbox" id="recalcHistory" checked> Пересчитать баллы за всю историю</label>
+  <label class="recalc-check"><input type="checkbox" id="recalcHistory" checked> Пересчитать историю с новыми данными</label>
   <button class="btn btn-full" style="margin-top:4px" onclick="saveProfileFromSheet()">Сохранить</button>
   <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="closeProfileEdit()">Отмена</button>
 </div>
@@ -959,7 +959,7 @@ input[type=range].st-range{width:100%;accent-color:#a78bfa;margin:8px 0 0}
 //  CONSTANTS
 // ═══════════════════════════════════════════
 const _dk = atob('c2stcHJvai1KY2VEU0hjLW0wSlR1WUVPckZ2WFN6bW14SUYydE1yS1BnUFdySHBsV1dWXzB6Nm1TQmF6Q0lPTUdUZkUzeTQ0aUpXQ2V6WVpwVFQzQmxia0ZKS3J4M3FnaUhlaE9FYW90cUFXRUV5d1pfZlhidjBNM0FYQTJrQ1VIU3RBTXNGQmZoTFlQaDVkbFlzSHNYNkRucE90WnRqLXRFZ0E=');
-const VERSION = '1.4.55';
+const VERSION = '1.4.56';
 let G = { kcal:1800, prot:150, fat:60, carb:165 };
 
 const DEFAULT_PROFILE = {
@@ -1076,6 +1076,30 @@ function initApp() {
     }
   });
   if (migrated) lsSave('history', history);
+
+  if (!localStorage.getItem('deficitV2migrated')) {
+    const _migProfile = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
+    const _migBmrRest = _migProfile.weight
+      ? Math.round(calcBMR(_migProfile.gender, _migProfile.weight, _migProfile.height, _migProfile.age) * 1.1) : 1800;
+    const _migRestKcal = _migProfile.restKcal || _migBmrRest;
+    history.forEach(h => {
+      if (h.restKcal === undefined) {
+        h.restKcal = _migRestKcal;
+        h.goalKcal = _migProfile.kcal || 1800;
+        h.deficit  = _migRestKcal + (h.actKcal || 0) - (h.kcal || 0);
+      }
+    });
+    lsSave('history', history);
+    localStorage.setItem('deficitV2migrated', '1');
+  }
+
+  if (!lsGet('profileHistory', null)) {
+    const _p0 = lsGet('profile', null);
+    if (_p0) {
+      lsSave('profileHistory', [{ date: new Date().toISOString(), weight: _p0.weight,
+        goal: _p0.goal, mode: _p0.mode, goalKcal: _p0.kcal, restKcal: _p0.restKcal }]);
+    }
+  }
 
   const d = new Date();
   document.getElementById('hdrDate').textContent =
@@ -2194,13 +2218,19 @@ function closeDay() {
   const closeDateVal = document.getElementById('closeDayDate').value;
   const closeDateObj = closeDateVal ? new Date(closeDateVal + 'T12:00:00') : new Date();
 
+  const _cdProfile = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
+  const _cdBmrRest = _cdProfile.weight
+    ? Math.round(calcBMR(_cdProfile.gender, _cdProfile.weight, _cdProfile.height, _cdProfile.age) * 1.1) : 1800;
+  const _cdRestKcal = _cdProfile.restKcal || _cdBmrRest;
   history.push({
     date:       closeDateObj.toISOString(),
     kcal:       dayObj.kcal,
     prot:       dayObj.prot,
     fat:        dayObj.fat,
     carb:       dayObj.carb,
-    deficit:    Math.round(G.kcal - dayObj.kcal),
+    restKcal:   _cdRestKcal,
+    goalKcal:   _cdProfile.kcal,
+    deficit:    _cdRestKcal + actKcal - dayObj.kcal,
     scores:     r.scores,
     total:      r.total,
     dayTotal:   r.dayTotal,
@@ -2482,7 +2512,12 @@ function renderChart() {
   });
   const питание = history.map(h => { const s = getScoresForDay(h); return s.total || 0; });
   const день    = history.map(h => { const s = getScoresForDay(h); return s.dayTotal || s.total || 0; });
-  const темп    = history.map(h => calcKgPerMonth(h));
+  const _chartProfile = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
+  const темп    = history.map(h => {
+    const _def = h.deficit !== undefined ? h.deficit
+      : ((h.restKcal || _chartProfile.restKcal || 1800) + (h.actKcal || 0)) - (h.kcal || 0);
+    return Math.round(_def / 7700 * 30 * 10) / 10;
+  });
 
   function bc(v) {
     if (goal === 'gain') return v <= 0 ? '#1D9E75' : '#E24B4A';
@@ -2672,9 +2707,15 @@ function closeProfileEdit() {
 }
 
 function recalcAllHistory() {
+  const _rProfile = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
+  const _rBmrRest = _rProfile.weight
+    ? Math.round(calcBMR(_rProfile.gender, _rProfile.weight, _rProfile.height, _rProfile.age) * 1.1) : 1800;
+  const _rRestKcal = _rProfile.restKcal || _rBmrRest;
   const updated = history.map(h => {
     const r = getScoresForDay(h);
-    return { ...h, scores: r.scores, total: r.total, dayTotal: r.dayTotal, kgPerMonth: calcKgPerMonth(h) };
+    const def = _rRestKcal + (h.actKcal || 0) - (h.kcal || 0);
+    return { ...h, restKcal: _rRestKcal, goalKcal: _rProfile.kcal, deficit: def,
+             scores: r.scores, total: r.total, dayTotal: r.dayTotal, kgPerMonth: calcKgPerMonth(h) };
   });
   history = updated;
   lsSave('history', updated);
@@ -2867,6 +2908,11 @@ function saveProfileFromSheet() {
   const prevGoal = lsGet('profile', {}).goal;
   const profile  = readProfileForm('pf');
   lsSave('profile', profile);
+  const _phSnap = { date: new Date().toISOString(), weight: profile.weight,
+    goal: profile.goal, mode: profile.mode, goalKcal: profile.kcal, restKcal: profile.restKcal };
+  const _phArr = lsGet('profileHistory', []);
+  _phArr.unshift(_phSnap);
+  lsSave('profileHistory', _phArr);
   loadGoals();
   const doRecalc = document.getElementById('recalcHistory')?.checked;
   if (doRecalc) {
@@ -3204,8 +3250,9 @@ function renderHistoryDayRow(h, idx, bmr, targets) {
 
   const effKcal = (h.kcal || 0) - (h.actKcal || 0);
   const ref = bmr > 0 ? bmr : (targets.kcal || 1800);
-  const deficit = Math.round(ref - effKcal);
-  const kgDay = Math.round(-deficit * 30 / 7700 * 10) / 10;
+  const _rowProfile = Object.assign({}, DEFAULT_PROFILE, lsGet('profile', {}));
+  const deficit = h.deficit !== undefined ? h.deficit : calcDeficit(h, _rowProfile);
+  const kgDay = Math.round(deficit * 30 / 7700 * 10) / 10;
   const kPct = targets.kcal ? Math.round((h.kcal || 0) / targets.kcal * 100) : 0;
   const pPct = targets.prot ? Math.round((h.prot || 0) / targets.prot * 100) : 0;
   const fPct = targets.fat  ? Math.round((h.fat  || 0) / targets.fat  * 100) : 0;
@@ -3214,7 +3261,7 @@ function renderHistoryDayRow(h, idx, bmr, targets) {
   const detailId = 'hwday-' + idx;
 
   const isDeficit = deficit >= 0;
-  const kgColor  = kgDay <= 0 ? '#1D9E75' : '#E24B4A';
+  const kgColor  = kgDay >= 0 ? '#1D9E75' : '#E24B4A';
   const hasActivity = (h.actKcal || 0) > 0;
   const defAbs   = Math.abs(deficit);
   const defLabel = isDeficit ? 'дефицит' : 'профицит';
@@ -3255,7 +3302,7 @@ function renderHistoryDayRow(h, idx, bmr, targets) {
     <div style="flex:1">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:13px;color:#ccc;font-weight:500">${fmtNum(h.kcal||0)} ккал</span>
-        <span style="font-size:13px;font-weight:700;color:${kgColor}">${kgDay<=0?'↓':'↑'}${fmtRu(Math.abs(kgDay))} кг/мес</span>
+        <span style="font-size:13px;font-weight:700;color:${kgColor}">${kgDay>=0?'↓':'↑'}${fmtRu(Math.abs(kgDay))} кг/мес</span>
       </div>
       <div style="font-size:11px;margin-top:3px">
         <span style="color:${kgColor}">${defLabel} ${defSign}${defAbs} ккал</span>
@@ -3281,7 +3328,7 @@ function renderHistoryDayRow(h, idx, bmr, targets) {
       <div class="hw-calc-row"><span>Базовый расход (BMR)</span><span style="color:#888">${Math.round(bmr)} ккал</span></div>
       <div class="hw-divider"></div>
       <div class="hw-calc-row hw-result"><span>Дефицит</span><span style="color:${kgColor2}">${deficit > 0 ? '−' : '+'} ${Math.abs(deficit)} ккал</span></div>
-      <div class="hw-calc-row hw-tempo-row"><span>Темп похудения</span><span style="color:${kgColor2}">${kgDay <= 0 ? '↓' : '↑'} ${fmtRu(Math.abs(kgDay))} кг/мес</span></div>
+      <div class="hw-calc-row hw-tempo-row"><span>Темп похудения</span><span style="color:${kgColor2}">${kgDay >= 0 ? '↓' : '↑'} ${fmtRu(Math.abs(kgDay))} кг/мес</span></div>
     </div>
     <div class="hw-kbzhu" style="margin-top:8px">
       <div class="hw-kbzhu-row"><span style="color:var(--kcal)">Ккал</span><span>${h.kcal || 0} / ${targets.kcal}</span><span style="color:var(--muted)">${kPct}%</span></div>
